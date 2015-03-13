@@ -10,10 +10,10 @@
  * for routing.
  *
  **********************************************************************/
-include
-# <stdio.h>
-#include <assert.h>
 
+#include <stdio.h>
+#include <assert.h>
+#include <stdbool.h>
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -50,31 +50,43 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
-bool isPacketTypeIP(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
-{
-  return true; //lmao
-}
 
-void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
-{
-  if(isIMCP)
+void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
+  printf("handleIPPacket \n");
+  /*if(isIMCP)
   {
     //fill in code to handle IMCP stuff
   }
   else
   {
     //fill in code to handle regular IP packes
-  }
+  }*/
 }
 
-void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
-{
-  //fill in code here to handle ARP packets (requests and replies)
+void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
+  printf("handleARPPacket \n");
+  /**/
+  sr_arp_hdr_t *arphead;
+  arphead = (sr_arp_hdr_t*) packet + sizeof(sr_ethernet_hdr_t);
+
+  /*TODO: check if target IP matches one of your routers*/
+  /*if(target matches) 
+    check ar_tip against....our routers? idk where those are*/
+    if(arphead->ar_op == arp_op_request){
+      /*handle ARP requests
+        send a reply */
+
+    }
+    else if(arphead->ar_op == arp_op_reply){
+      /*handle ARP replies
+        cache the request */
+
+    }
 }
 
 bool isIMCP(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
 {
-  return true; //lmao
+  return true; 
 }
 
 
@@ -106,18 +118,13 @@ void sr_handlepacket(struct sr_instance* sr,
 
   printf("*** -> Received packet of length %d \n",len);
 
-  /* fill in code here */
-  /* 
-  bool isIP = isPacketTypeIP(sr, packet, len, interface);
-  if(isIP)
-  {
+  /*determine type of packet contained in ethernet frame*/
+  sr_ethernet_hdr_t *header;
+  header = (sr_ethernet_hdr_t*) packet;
+  if(header->ether_type == ethertype_ip)
     sr_handleIPPacket(sr, packet, len, interface);
-  }
-  else
-  {
+  else if(header->ether_type == ethertype_arp)
     sr_handleARPPacket(sr, packet, len, interface);
-  }
-  */
 
 }/* end sr_ForwardPacket */
 
