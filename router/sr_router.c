@@ -10,8 +10,8 @@
  * for routing.
  *
  **********************************************************************/
-
-#include <stdio.h>
+include
+# <stdio.h>
 #include <assert.h>
 
 
@@ -50,6 +50,34 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
+bool isPacketTypeIP(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
+{
+  return true; //lmao
+}
+
+void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
+{
+  if(isIMCP)
+  {
+    //fill in code to handle IMCP stuff
+  }
+  else
+  {
+    //fill in code to handle regular IP packes
+  }
+}
+
+void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
+{
+  //fill in code here to handle ARP packets (requests and replies)
+}
+
+bool isIMCP(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
+{
+  return true; //lmao
+}
+
+
 /*---------------------------------------------------------------------
  * Method: sr_handlepacket(uint8_t* p,char* interface)
  * Scope:  Global
@@ -79,6 +107,17 @@ void sr_handlepacket(struct sr_instance* sr,
   printf("*** -> Received packet of length %d \n",len);
 
   /* fill in code here */
+  /* 
+  bool isIP = isPacketTypeIP(sr, packet, len, interface);
+  if(isIP)
+  {
+    sr_handleIPPacket(sr, packet, len, interface);
+  }
+  else
+  {
+    sr_handleARPPacket(sr, packet, len, interface);
+  }
+  */
 
 }/* end sr_ForwardPacket */
 
