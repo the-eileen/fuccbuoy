@@ -68,13 +68,33 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   /**/
   sr_arp_hdr_t *arphead;
   arphead = (sr_arp_hdr_t*) packet + sizeof(sr_ethernet_hdr_t);
+  int match = 0;
+   /*check if target IP matches one of your routers*/
+  struct sr_if* ifIterator = sr->if_list;
+  while(ifIterator->next){
+    if(ifIterator->ip == arphead->ar_tip){
+      match = 1;
+      break;
+    }
+    else
+      ifIterator = ifIterator->next;
+  }
 
-  /*TODO: check if target IP matches one of your routers*/
-  /*if(target matches) 
-    check ar_tip against....our routers? idk where those are*/
+ 
+  if(match){
+    
     if(arphead->ar_op == arp_op_request){
       /*handle ARP requests
         send a reply */
+
+      sr_ethernet_hdr_t packet;
+      /*packet.ether_dhost =*/ 
+
+      /*send packet function in sr_vns_comm.c*/
+      /*sr_send_packet()*/
+      /*Eileen: I can't quite figure out what each argument of the send function is asking for
+      may need to pass in the ethernet header to this functioin to extract the original sending
+      host so we know who to send to here*/
 
     }
     else if(arphead->ar_op == arp_op_reply){
@@ -82,6 +102,7 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
         cache the request */
 
     }
+  }
 }
 
 bool isIMCP(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
