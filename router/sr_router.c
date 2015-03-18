@@ -14,7 +14,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
+
 #include <stdlib.h>
+
+#include <string.h>
+
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -72,18 +76,57 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   arphead = (sr_arp_hdr_t*) etherhead + sizeof(sr_ethernet_hdr_t);
   int match = 0;
    /*check if target IP matches one of your routers*/
+  
+
   struct sr_if* ifIterator = sr->if_list;
+  int n = 0;
   while(ifIterator->next){
-    if(ifIterator->ip == arphead->ar_tip){
-      match = 1;
-      break;
+    n++; /*keeps track of how many elements there are*/
+    ifIterator = ifIterator->next;
     }
-    else
-      ifIterator = ifIterator->next;
+  uint32_t xorArray [n]; /*array the size of n IPs*/
+  int leadingZeros  [n];
+
+  ifIterator = sr->if_list;
+  int i = 0;
+  while(ifIterator->next){
+    memset(&(xorArray[i]), (ifIterator->ip ^ arphead->ar_tip), 4);
+    ifIterator  = ifIterator->next;
+    i++;
+  }
+  int j;
+  for(i = 0; i < n; i++)
+  {
+    for(j = 0; j < 32; j++)
+    {
+      leadingZeros[i] = 32; /*if there's no matches*/
+      if(xorArray[i] & (1 << 31))
+      {
+        leadingZeros[i] = j;
+        break;
+      }
+      else
+      {
+        xorArray[i] = xorArray[i] << 1;
+      }
+    }
+  }
+  int currentMin = 33;
+  int minIndex = 0;
+  for(i = 0; i < n; i++)
+  {
+    if(leadingZeros[i] < currentMin)
+    {
+      currentMin = leadingZeros[i];
+      minIndex = i;
+    }
+  }
+  ifIterator = sr->if_list;
+  for(i = 0; i < minIndex; i++)
+  {
+    ifIterator = ifIterator->next;
   }
 
- 
-  if(match){
     
     if(arphead->ar_op == arp_op_request){
       /*handle ARP requests
@@ -115,7 +158,6 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
         cache the request */
 
     }
-  }
 }
 
 bool isIMCP(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
