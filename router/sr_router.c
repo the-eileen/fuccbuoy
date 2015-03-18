@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -90,8 +91,8 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
 
       uint8_t* repPacket = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
       sr_ethernet_hdr_t* reply_ether = (sr_ethernet_hdr_t*) repPacket;
-      reply_ether->ether_dhost = etherhead->ether_shost;
-      reply_ether->ether_shost = etherhead->ether_dhost;
+      memcpy(reply_ether->ether_dhost, etherhead->ether_shost, ETHER_ADDR_LEN);
+      memcpy(reply_ether->ether_shost, etherhead->ether_dhost, ETHER_ADDR_LEN);
       reply_ether->ether_type = ethertype_arp;
 
       sr_arp_hdr_t* reply_arp = (sr_arp_hdr_t*) reply_ether + sizeof(sr_ethernet_hdr_t);
@@ -100,15 +101,13 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
       reply_arp->ar_hln = 0x06;
       reply_arp->ar_pln = 0x04;
       reply_arp->ar_op = arp_op_reply;
-      reply_arp->ar_sha = ifIterator->addr;
+      memcpy(reply_arp->ar_sha, ifIterator->addr, ETHER_ADDR_LEN);
       reply_arp->ar_sip = ifIterator->ip;
-      reply_arp->ar_tha = 
+      memcpy(reply_arp->ar_tha, arphead->ar_sha, ETHER_ADDR_LEN);
+      reply_arp->ar_tip = arphead->ar_sip;
 
       /*send packet function in sr_vns_comm.c*/
-      /*sr_send_packet()*/
-      /*Eileen: I can't quite figure out what each argument of the send function is asking for
-      may need to pass in the ethernet header to this functioin to extract the original sending
-      host so we know who to send to here*/
+      sr_send_packet(sr, repPacket, sizeof(repPacket), ifIterator->name);
 
     }
     else if(arphead->ar_op == arp_op_reply){
