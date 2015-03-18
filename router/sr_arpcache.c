@@ -17,7 +17,7 @@
   See the comments in the header file for an idea of what it should look like.
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-    /* Fill this in */
+    /* fill in the request queue */
 }
 
 /* You should not need to touch the rest of this code. */

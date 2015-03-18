@@ -13,7 +13,8 @@
 
 #include <stdio.h>
 #include <assert.h>
-
+#include <stdbool.h>
+#include <string.h>
 
 #include "sr_if.h"
 #include "sr_rt.h"
@@ -50,6 +51,105 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
+
+void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
+  printf("handleIPPacket \n");
+  /*if(isIMCP)
+  {
+    //fill in code to handle IMCP stuff
+  }
+  else
+  {
+    //fill in code to handle regular IP packes
+  }*/
+}
+
+void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
+  printf("handleARPPacket \n");
+  /**/
+  sr_arp_hdr_t *arphead;
+  arphead = (sr_arp_hdr_t*) packet + sizeof(sr_ethernet_hdr_t);
+  /*int match = 0;*/
+   /*check if target IP matches one of your routers*/
+  
+
+  struct sr_if* ifIterator = sr->if_list;
+  int n = 0;
+  while(ifIterator->next){
+    n++; /*keeps track of how many elements there are*/
+    ifIterator = ifIterator->next;
+    }
+  uint32_t xorArray [n]; /*array the size of n IPs*/
+  int leadingZeros  [n];
+
+  ifIterator = sr->if_list;
+  int i = 0;
+  while(ifIterator->next){
+    memset(&(xorArray[i]), (ifIterator->ip ^ arphead->ar_tip), 4);
+    ifIterator  = ifIterator->next;
+    i++;
+  }
+  int j;
+  for(i = 0; i < n; i++)
+  {
+    for(j = 0; j < 32; j++)
+    {
+      leadingZeros[i] = 32; /*if there's no matches*/
+      if(xorArray[i] & (1 << 31))
+      {
+        leadingZeros[i] = j;
+        break;
+      }
+      else
+      {
+        xorArray[i] = xorArray[i] << 1;
+      }
+    }
+  }
+  int currentMin = 33;
+  int minIndex = 0;
+  for(i = 0; i < n; i++)
+  {
+    if(leadingZeros[i] < currentMin)
+    {
+      currentMin = leadingZeros[i];
+      minIndex = i;
+    }
+  }
+  ifIterator = sr->if_list;
+  for(i = 0; i < minIndex; i++)
+  {
+    ifIterator = ifIterator->next;
+  }
+
+    
+    if(arphead->ar_op == arp_op_request){
+      /*handle ARP requests
+        send a reply */
+
+      sr_ethernet_hdr_t packet;
+      /*packet.ether_dhost =*/ 
+
+      /*send packet function in sr_vns_comm.c*/
+      /*sr_send_packet()*/
+      /*Eileen: I can't quite figure out what each argument of the send function is asking for
+      may need to pass in the ethernet header to this functioin to extract the original sending
+      host so we know who to send to here*/
+
+    }
+    else if(arphead->ar_op == arp_op_reply){
+      /*handle ARP replies
+        cache the request */
+
+    }
+}
+
+bool isIMCP(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
+{
+  return true; 
+}
+
+
 /*---------------------------------------------------------------------
  * Method: sr_handlepacket(uint8_t* p,char* interface)
  * Scope:  Global
@@ -78,7 +178,13 @@ void sr_handlepacket(struct sr_instance* sr,
 
   printf("*** -> Received packet of length %d \n",len);
 
-  /* fill in code here */
+  /*determine type of packet contained in ethernet frame*/
+  sr_ethernet_hdr_t *header;
+  header = (sr_ethernet_hdr_t*) packet;
+  if(header->ether_type == ethertype_ip)
+    sr_handleIPPacket(sr, packet, len, interface);
+  else if(header->ether_type == ethertype_arp)
+    sr_handleARPPacket(sr, packet, len, interface);
 
 }/* end sr_ForwardPacket */
 
