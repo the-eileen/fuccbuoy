@@ -67,7 +67,8 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   printf("handleARPPacket \n");
   /**/
   sr_arp_hdr_t *arphead;
-  arphead = (sr_arp_hdr_t*) packet + sizeof(sr_ethernet_hdr_t);
+  sr_ethernet_hdr_t* etherhead = (sr_ethernet_hdr_t*) packet;
+  arphead = (sr_arp_hdr_t*) etherhead + sizeof(sr_ethernet_hdr_t);
   int match = 0;
    /*check if target IP matches one of your routers*/
   struct sr_if* ifIterator = sr->if_list;
@@ -87,8 +88,21 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
       /*handle ARP requests
         send a reply */
 
-      sr_ethernet_hdr_t packet;
-      /*packet.ether_dhost =*/ 
+      uint8_t* repPacket = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+      sr_ethernet_hdr_t* reply_ether = (sr_ethernet_hdr_t*) repPacket;
+      reply_ether->ether_dhost = etherhead->ether_shost;
+      reply_ether->ether_shost = etherhead->ether_dhost;
+      reply_ether->ether_type = ethertype_arp;
+
+      sr_arp_hdr_t* reply_arp = (sr_arp_hdr_t*) reply_ether + sizeof(sr_ethernet_hdr_t);
+      reply_arp->ar_hrd = arp_hrd_ethernet;
+      reply_arp->ar_pro = ethertype_arp;
+      reply_arp->ar_hln = 0x06;
+      reply_arp->ar_pln = 0x04;
+      reply_arp->ar_op = arp_op_reply;
+      reply_arp->ar_sha = ifIterator->addr;
+      reply_arp->ar_sip = ifIterator->ip;
+      reply_arp->ar_tha = 
 
       /*send packet function in sr_vns_comm.c*/
       /*sr_send_packet()*/
