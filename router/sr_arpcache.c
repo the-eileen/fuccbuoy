@@ -23,6 +23,9 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
         if (difftime(time(NULL), req->sent) > 1.0){
             if(req->times_sent >= 5){
                 /*send ICMP not reachable*/
+                
+
+
                 sr_arpreq_destroy(cache, req);
             }
             else{
