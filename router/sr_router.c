@@ -59,7 +59,7 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
-
+/*
 sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t* data, uint16_t id, uint32_t srcIP, uint32_t destIP){
     sr_icmp_t3_hdr_t *icmpPkt = malloc(sizeof(sr_icmp_t3_hdr_t));
     sr_icmp_hdr_t *pkt = malloc(sizeof(sr_icmp_hdr_t));
@@ -96,7 +96,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t* data, uint16_t id,
 
   return IPpkt;
 }
-
+*/
 struct sr_packet * sr_createFrame(uint8_t * IPpacket,
                                 unsigned int packet_len,
                                 char * iface)
@@ -151,7 +151,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
   uint16_t original_chksum = ip_pack->ip_sum;
   ip_pack->ip_sum = 0;
   uint16_t computed_chksum = 0;
-  computed_chksum = cksum((const void*)ip_pack, ip_pack->ip_len*4);
+  computed_chksum = cksum((const void*)ip_pack, ip_pack->ip_len);
   if (computed_chksum != original_chksum)
   {
     return;				/*drop the packet*/
