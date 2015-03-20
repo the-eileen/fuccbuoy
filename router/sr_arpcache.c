@@ -11,11 +11,14 @@
 #include "sr_if.h"
 #include "sr_protocol.h"
 
+
 /* 
   This function gets called every second. For each request sent out, we keep
   checking whether we should resend an request or destroy the arp request.
   See the comments in the header file for an idea of what it should look like.
 */
+
+
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
     struct sr_arpreq *req;
     struct sr_arpcache *cache = &sr->cache;
@@ -23,6 +26,15 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
         if (difftime(time(NULL), req->sent) > 1.0){
             if(req->times_sent >= 5){
                 /*send ICMP not reachable*/
+                sr_ethernet_hdr_t *ethhd = (sr_ethernet_hdr_t*) req->packets->buf;
+                sr_ip_hdr_t *iphd = (sr_ip_hdr_t*) ethhd + sizeof(sr_ethernet_hdr_t);
+                uint8_t data[ICMP_DATA_SIZE];
+                memcpy(data, iphd, ICMP_DATA_SIZE);
+                struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
+                sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(0x03, 0, data, iphd->ip_id, inter->ip, req->ip);
+                struct sr_packet *etherFrame = sr_createFrame(IPpacket, IPpacket->ip_len, req->packets->iface);
+                sr_send_packet(sr, (uint8_t*)etherFrame, sizeof(etherFrame), req->packets->iface);
+
                 sr_arpreq_destroy(cache, req);
             }
             else{
