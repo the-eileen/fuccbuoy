@@ -156,6 +156,19 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
     else if(arphead->ar_op == arp_op_reply){
       /*handle ARP replies
         cache the request */
+        struct sr_arpreq* insertedARP = sr_arpcache_insert(&(sr->cache),
+                                                           arphead-> ar_sha,
+                                                           arphead->ar_sip);
+        if(NULL != insertedARP)
+        {
+            struct sr_packet* packetPointer = insertedARP->packets;
+            while(packetPointer != NULL)
+            {
+                memcpy(packetPointer->buf, arphead->ar_sha, ETHER_ADDR_LEN);
+                sr_send_packet(sr, packetPointer->buf, packetPointer->len, interface);
+                packetPointer = packetPointer->next;
+            }
+        }
 
     }
 }
