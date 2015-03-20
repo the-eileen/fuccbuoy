@@ -17,7 +17,21 @@
   See the comments in the header file for an idea of what it should look like.
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-    /* fill in the request queue */
+    struct sr_arpreq *req;
+    struct sr_arpcache *cache = &sr->cache;
+    for(req = cache->requests; req != NULL; req = req->next){
+        if (difftime(time(NULL), req->sent) > 1.0){
+            if(req->times_sent >= 5){
+                /*send ICMP not reachable*/
+                sr_arpreq_destroy(cache, req);
+            }
+            else{
+                /*send the arprequest*/
+                req->sent = time(NULL);
+                req->times_sent++;
+            }
+        }
+    }
 }
 
 /* You should not need to touch the rest of this code. */
