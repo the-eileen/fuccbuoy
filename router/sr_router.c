@@ -59,6 +59,43 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
+sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t* data, uint16_t id, uint32_t srcIP, uint32_t destIP){
+    sr_icmp_t3_hdr_t *icmpPkt = malloc(sizeof(sr_icmp_t3_hdr_t));
+    sr_icmp_hdr_t *pkt = malloc(sizeof(sr_icmp_hdr_t));
+    sr_ip_hdr_t *IPpkt = malloc(sizeof(sr_ip_hdr_t));
+
+    if(type == 0x03){
+    IPpkt->ip_len = sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ip_hdr_t);
+    icmpPkt->icmp_type = type;
+    icmpPkt->icmp_code = code;
+    icmpPkt->icmp_sum = 0;
+    icmpPkt->unused = 0;
+    icmpPkt->next_mtu = 0;
+    memcpy(icmpPkt->data, data, ICMP_DATA_SIZE);
+    icmpPkt->icmp_sum = cksum(icmpPkt, sizeof(sr_icmp_t3_hdr_t));
+  }
+  else if(type == 0){
+    IPpkt->ip_len = sizeof(sr_icmp_hdr_t) + sizeof(sr_ip_hdr_t);
+    pkt->icmp_type = type;
+    pkt->icmp_code = code;
+    pkt->icmp_sum = 0;
+    pkt->icmp_sum = cksum(pkt, sizeof(sr_icmp_hdr_t));
+  }
+
+  
+  IPpkt->ip_tos = 0;
+  IPpkt->ip_id = id;
+  IPpkt->ip_off = 0;
+  IPpkt->ip_ttl = 0x128;
+  IPpkt->ip_p = ip_protocol_icmp;
+  IPpkt->ip_sum = 0;
+  IPpkt->ip_src = srcIP;
+  IPpkt->ip_dst = destIP;
+  pkt->icmp_sum = cksum(IPpkt, IPpkt->ip_len);
+
+  return IPpkt;
+}
+
 struct sr_packet * sr_createFrame(uint8_t * IPpacket, 
                                 unsigned int packet_len,
                                 char * iface)
