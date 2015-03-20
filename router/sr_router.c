@@ -59,6 +59,7 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
+
 sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t* data, uint16_t id, uint32_t srcIP, uint32_t destIP){
     sr_icmp_t3_hdr_t *icmpPkt = malloc(sizeof(sr_icmp_t3_hdr_t));
     sr_icmp_hdr_t *pkt = malloc(sizeof(sr_icmp_hdr_t));
@@ -96,22 +97,50 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t* data, uint16_t id,
   return IPpkt;
 }
 
-struct sr_packet * sr_createFrame(uint8_t * IPpacket, 
+struct sr_packet * sr_createFrame(uint8_t * IPpacket,
                                 unsigned int packet_len,
                                 char * iface)
 { /*CONFUSING: sr_packet is an ethernet frame.  This function takes in IP packets*/
     struct sr_packet *new_pkt = (struct sr_packet *)malloc(sizeof(struct sr_packet));
     new_pkt-> buf = (uint8_t *)malloc(packet_len + 14); /*14 bytes; 6 for dest, 6 for src, 2 for ethtype*/
+
     memcpy((new_pkt->buf) + 14, IPpacket, packet_len);
     new_pkt->len = packet_len + 14;
     new_pkt->iface = (char*)malloc(sr_IFACE_NAMELEN);
     strncpy(new_pkt->iface, iface, sr_IFACE_NAMELEN);
+
+    struct sr_if* interfaceThing = sr_get_interface(sr, iface);
+
+    memset((new_pkt->buf) + 8, 2048, 2); /*bytes are ezpz*/
+    memcpy((new_pkt->buf) + 6, interfaceThing->addr, 6);
     /* next field not filled out */
     /* can just call queue req */
     return new_pkt;
 }
 
+void handleEthFrame(struct sr_instance* sr,
+                    struct sr_arpcache *cache,
+                    struct sr_packet * frame,
+                    char * iface)
+{
+    /*check whether it's in the cache*/
+    uint32_t destIP;
+    memcpy(&destIP, (frame->buf)+30, 4);
 
+    struct sr_arpentry * result = sr_arpcache_lookup(cache, destIP);
+    if(result != NULL)
+    {
+        /* there exists a mapping! send that mofo*/
+        memcpy(frame->buf, result->mac, 6);
+        sr_send_packet(sr, frame->buf, frame->len, iface);
+        /* free(frame) */
+    }
+    else
+    {
+        /*no mapping RIPPERINO */
+        sr_arpcache_queuereq(&sr->cache, destIP, frame->buf, frame->len, iface);
+    }
+}
 
 void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
   printf("handleIPPacket \n");
