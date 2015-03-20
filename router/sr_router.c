@@ -27,6 +27,8 @@
 #include "sr_arpcache.h"
 #include "sr_utils.h"
 
+#include "sr_icmp.h"
+
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
@@ -34,6 +36,8 @@
  * Initialize the routing subsystem
  *
  *---------------------------------------------------------------------*/
+
+
 
 void sr_init(struct sr_instance* sr)
 {
@@ -58,14 +62,52 @@ void sr_init(struct sr_instance* sr)
 
 void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
   printf("handleIPPacket \n");
-  /*if(isIMCP)
+  
+  sr_ip_hdr_t* ip_pack = (sr_ip_hdr_t*) packet; 
+  
+  /*verify checksum before proceeding further*/
+  uint16_t original_chksum = ip_pack->ip_sum;
+  ip_pack->ip_sum = 0;
+  uint16_t computed_chksum = 0;
+  computed_chksum = cksum((const void*)ip_pack, ip_pack->ip_len*4);
+  if (computed_chksum != original_chksum)
+    return;				/*drop the packet*/
+  
+  bool amIDest = false;
+  struct sr_if* inter = sr->if_list;
+  while (inter != NULL)
   {
-    //fill in code to handle IMCP stuff
+    if (inter->ip == ip_pack->ip_dst)
+    {
+      amIDest = true;
+      break;
+    }
+    inter = inter->next;
+  }
+  
+  if(amIDest) 
+  {
+    /* fill in code to handle ICMP stuff */
+    if (ip_pack->ip_p == ip_protocol_icmp)
+    {
+    	/* process pings and replies */
+    }
+    else /* TCP or UDP protocol */
+    {
+      
+    }    
   }
   else
   {
-    //fill in code to handle regular IP packes
-  }*/
+    /* fill in code to handle regular IP packets */
+    ip_pack->ip_ttl--;
+    if (ip_pack->ip_ttl == 0)
+      /* send time exceeded icmp message */;
+    
+    /* if routing entry not found, send ICMP network unreachable message */
+
+    /* else get IP of next hop... */  
+  }
 }
 
 void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
