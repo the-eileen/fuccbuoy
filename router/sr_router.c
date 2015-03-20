@@ -59,6 +59,20 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
+struct sr_packet * sr_createFrame(uint8_t * IPpacket, 
+                                unsigned int packet_len,
+                                char * iface)
+{ /*CONFUSING: sr_packet is an ethernet frame.  This function takes in IP packets*/
+    struct sr_packet *new_pkt = (struct sr_packet *)malloc(sizeof(struct sr_packet));
+    new_pkt-> buf = (uint8_t *)malloc(packet_len + 14); /*14 bytes; 6 for dest, 6 for src, 2 for ethtype*/
+    memcpy((new_pkt->buf) + 14, IPpacket, packet_len);
+    new_pkt->len = packet_len + 14;
+    new_pkt->iface = (char*)malloc(sr_IFACE_NAMELEN);
+    strncpy(new_pkt->iface, iface, sr_IFACE_NAMELEN);
+    /* next field not filled out */
+    /* can just call queue req */
+    return new_pkt;
+}
 
 
 
@@ -73,11 +87,12 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
   uint16_t computed_chksum = 0;
   computed_chksum = cksum((const void*)ip_pack, ip_pack->ip_len*4);
   if (computed_chksum != original_chksum)
+  {
     return;				/*drop the packet*/
-  
+  }
   bool amIDest = false;
   struct sr_if* inter = sr->if_list;
-  while (inter != NULL)
+  while (inter != NULL) /*check each to check whether we're the dest*/
   {
     if (inter->ip == ip_pack->ip_dst)
     {
