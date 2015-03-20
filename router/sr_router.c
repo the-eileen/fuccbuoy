@@ -255,7 +255,7 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   sr_arp_hdr_t *arphead;
   sr_ethernet_hdr_t* etherhead = (sr_ethernet_hdr_t*) packet;
   arphead = (sr_arp_hdr_t*) etherhead + sizeof(sr_ethernet_hdr_t);
-  int match = 0;
+  /*int match = 0;*/
    /*check if target IP matches one of your routers*/
   
 
