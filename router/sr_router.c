@@ -204,14 +204,16 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     {
     	/* process pings and replies */
         printf("received a ping");
-        uint8_t data[ICMP_DATA_SIZE] = {0};
+        uint8_t data[ICMP_DATA_SIZE];
+        memcpy(data, ip_pack, ICMP_DATA_SIZE);
         sr_ip_hdr_t* echoReply = sr_ICMPtoIP(0, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
         sr_send_packet(sr, (uint8_t*)echoReply, echoReply->ip_len, interface);
         free(echoReply);
     }
     else /* TCP or UDP protocol */
     {
-        uint8_t data[ICMP_DATA_SIZE] = {0};
+        uint8_t data[ICMP_DATA_SIZE];
+        memcpy(data, ip_pack, ICMP_DATA_SIZE);
         sr_ip_hdr_t* portUnreach = sr_ICMPtoIP(3, 3, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
         sr_send_packet(sr, (uint8_t*)portUnreach, portUnreach->ip_len, interface);
         free(portUnreach);
@@ -224,7 +226,8 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     if (ip_pack->ip_ttl == 0)
     {
       /* send time exceeded icmp message */
-      uint8_t data[ICMP_DATA_SIZE] = {0};
+      uint8_t data[ICMP_DATA_SIZE];
+      memcpy(data, ip_pack, ICMP_DATA_SIZE);
       sr_ip_hdr_t* timeExceed = sr_ICMPtoIP(11, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
       sr_send_packet(sr, (uint8_t*)timeExceed, timeExceed->ip_len, interface);
       free(timeExceed);
@@ -239,7 +242,8 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     /* if routing entry not found, send ICMP network unreachable message */
     if (entry == NULL)
     {
-      uint8_t data[ICMP_DATA_SIZE] = {0};
+      uint8_t data[ICMP_DATA_SIZE];
+      memcpy(data, ip_pack, ICMP_DATA_SIZE);
       sr_ip_hdr_t* netUnreach = sr_ICMPtoIP(3, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
       sr_send_packet(sr, (uint8_t*) netUnreach, netUnreach->ip_len, interface);
       free(netUnreach);
@@ -391,7 +395,7 @@ void sr_handlepacket(struct sr_instance* sr,
   assert(interface);
 
   printf("*** -> Received packet of length %d \n",len);
-
+  print_hdrs(packet, len);
   /*determine type of packet contained in ethernet frame*/
   sr_ethernet_hdr_t *header;
   header = (sr_ethernet_hdr_t*) packet;
