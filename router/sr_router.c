@@ -199,9 +199,11 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
   if(amIDest) 
   {
     /* fill in code to handle ICMP stuff */
+    printf("iAmDest\n");
     if (ip_pack->ip_p == ip_protocol_icmp)
     {
     	/* process pings and replies */
+        printf("received a ping");
         uint8_t data[ICMP_DATA_SIZE] = {0};
         sr_ip_hdr_t* echoReply = sr_ICMPtoIP(0, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
         sr_send_packet(sr, (uint8_t*)echoReply, echoReply->ip_len, interface);
