@@ -395,12 +395,13 @@ void sr_handlepacket(struct sr_instance* sr,
   /*determine type of packet contained in ethernet frame*/
   sr_ethernet_hdr_t *header;
   header = (sr_ethernet_hdr_t*) packet;
-  if(header->ether_type == ethertype_ip)
+  uint16_t type = ethertype(packet);
+  if(type == ethertype_ip)
   {
     printf("Got an IP packet!\n");
     sr_handleIPPacket(sr, packet, len, interface);
   }
-  else if(header->ether_type == ethertype_arp)
+  else if(type == ethertype_arp)
   {
     printf("Got an ARP packet!\n");
     sr_handleARPPacket(sr, packet, len, interface);
