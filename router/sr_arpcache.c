@@ -10,14 +10,63 @@
 #include "sr_router.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
+#include "sr_icmp.h"
 
 /* 
   This function gets called every second. For each request sent out, we keep
   checking whether we should resend an request or destroy the arp request.
   See the comments in the header file for an idea of what it should look like.
 */
+
+
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-    /* Fill this in */
+    struct sr_arpreq *req;
+    struct sr_arpcache *cache = &sr->cache;
+    for(req = cache->requests; req != NULL; req = req->next){
+        if (difftime(time(NULL), req->sent) > 1.0){
+            if(req->times_sent >= 5){
+                /*send ICMP not reachable*/
+                sr_ethernet_hdr_t *ethhd = (sr_ethernet_hdr_t*) req->packets->buf;
+                sr_ip_hdr_t *iphd = (sr_ip_hdr_t*) ethhd + sizeof(sr_ethernet_hdr_t);
+                uint8_t data[ICMP_DATA_SIZE];
+                memcpy(data, iphd, ICMP_DATA_SIZE);
+                struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
+                sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(0x03, 0, data, iphd->ip_id, inter->ip, req->ip);
+                struct sr_packet *etherFrame = sr_createFrame(sr, IPpacket, IPpacket->ip_len, req->packets->iface);
+                sr_send_packet(sr, (uint8_t*)etherFrame, sizeof(etherFrame), req->packets->iface);
+
+                sr_arpreq_destroy(cache, req);
+            }
+            else{
+                /*send the arprequest*/
+                uint8_t* reqPacket = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+                struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
+              sr_ethernet_hdr_t* req_ether = (sr_ethernet_hdr_t*) reqPacket;
+              /*memcpy(req_ether->ether_dhost, etherhead->ether_shost, ETHER_ADDR_LEN);*/
+              memcpy(req_ether->ether_shost, inter->addr, ETHER_ADDR_LEN);
+              req_ether->ether_type = ethertype_arp;
+
+              sr_arp_hdr_t* req_arp = (sr_arp_hdr_t*) req_ether + sizeof(sr_ethernet_hdr_t);
+              req_arp->ar_hrd = arp_hrd_ethernet;
+              req_arp->ar_pro = ethertype_arp;
+              req_arp->ar_hln = 0x06;
+              req_arp->ar_pln = 0x04;
+              req_arp->ar_op = arp_op_request;
+              memcpy(req_arp->ar_sha, inter->addr, ETHER_ADDR_LEN);
+              req_arp->ar_sip = inter->ip;
+              
+              req_arp->ar_tip = req->ip;
+
+              /*send packet function in sr_vns_comm.c*/
+              sr_send_packet(sr, reqPacket, sizeof(reqPacket), inter->name);
+
+
+
+                req->sent = time(NULL);
+                req->times_sent++;
+            }
+        }
+    }
 }
 
 /* You should not need to touch the rest of this code. */
