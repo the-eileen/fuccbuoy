@@ -313,10 +313,10 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   }
 
     
-    if(arphead->ar_op == arp_op_request){
+    if(ntohs(arphead->ar_op) == arp_op_request){
       /*handle ARP requests
         send a reply */
-
+        printf("oh! oh! It's an arp request! okok let me try! \n");
       uint8_t* repPacket = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
       sr_ethernet_hdr_t* reply_ether = (sr_ethernet_hdr_t*) repPacket;
       memcpy(reply_ether->ether_dhost, etherhead->ether_shost, ETHER_ADDR_LEN);
