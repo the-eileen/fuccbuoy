@@ -31,7 +31,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
                 uint8_t data[ICMP_DATA_SIZE];
                 memcpy(data, iphd, ICMP_DATA_SIZE);
                 struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
-                sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(0x03, 0, data, iphd->ip_id, inter->ip, req->ip);
+                sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(0x03, 1, data, iphd->ip_id, inter->ip, req->ip);
                 struct sr_packet *etherFrame = sr_createFrame(sr, IPpacket, IPpacket->ip_len, req->packets->iface);
                 sr_send_packet(sr, (uint8_t*)etherFrame, sizeof(etherFrame), req->packets->iface);
 
