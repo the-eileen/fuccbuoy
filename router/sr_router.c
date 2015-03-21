@@ -180,8 +180,10 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
   computed_chksum = cksum((const void*)ip_pack, ip_pack->ip_len);
   if (computed_chksum != original_chksum)
   {
+    printf("CHECKSUM FAILED \n");
     return;				/*drop the packet*/
   }
+  printf("CHECKSUM WORKS AYYYY \n");
   bool amIDest = false;
   struct sr_if* inter = sr->if_list;
   while (inter != NULL) /*check each to check whether we're the dest*/
@@ -392,9 +394,18 @@ void sr_handlepacket(struct sr_instance* sr,
   sr_ethernet_hdr_t *header;
   header = (sr_ethernet_hdr_t*) packet;
   if(header->ether_type == ethertype_ip)
+  {
+    printf("Got an IP packet!\n");
     sr_handleIPPacket(sr, packet, len, interface);
+  }
   else if(header->ether_type == ethertype_arp)
+  {
+    printf("Got an ARP packet!\n");
     sr_handleARPPacket(sr, packet, len, interface);
-
+  }
+  else
+  {
+    printf("Uhh...packet doesn't...have a thing\n");
+  }
 }/* end sr_ForwardPacket */
 
