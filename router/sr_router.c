@@ -27,8 +27,7 @@
 #include "sr_arpcache.h"
 #include "sr_utils.h"
 
-#include "sr_icmp.h"
-
+/*#include "sr_icmp.h"*/
 
 /*---------------------------------------------------------------------
  * Method: sr_init(void)
@@ -60,44 +59,8 @@ void sr_init(struct sr_instance* sr)
 
 } /* -- sr_init -- */
 
-/*
-sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t* data, uint16_t id, uint32_t srcIP, uint32_t destIP){
-    sr_icmp_t3_hdr_t *icmpPkt = malloc(sizeof(sr_icmp_t3_hdr_t));
-    sr_icmp_hdr_t *pkt = malloc(sizeof(sr_icmp_hdr_t));
-    sr_ip_hdr_t *IPpkt = malloc(sizeof(sr_ip_hdr_t));
 
-    if(type == 0x03){
-    IPpkt->ip_len = sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ip_hdr_t);
-    icmpPkt->icmp_type = type;
-    icmpPkt->icmp_code = code;
-    icmpPkt->icmp_sum = 0;
-    icmpPkt->unused = 0;
-    icmpPkt->next_mtu = 0;
-    memcpy(icmpPkt->data, data, ICMP_DATA_SIZE);
-    icmpPkt->icmp_sum = cksum(icmpPkt, sizeof(sr_icmp_t3_hdr_t));
-  }
-  else if(type == 0){
-    IPpkt->ip_len = sizeof(sr_icmp_hdr_t) + sizeof(sr_ip_hdr_t);
-    pkt->icmp_type = type;
-    pkt->icmp_code = code;
-    pkt->icmp_sum = 0;
-    pkt->icmp_sum = cksum(pkt, sizeof(sr_icmp_hdr_t));
-  }
 
-  
-  IPpkt->ip_tos = 0;
-  IPpkt->ip_id = id;
-  IPpkt->ip_off = 0;
-  IPpkt->ip_ttl = 0x128;
-  IPpkt->ip_p = ip_protocol_icmp;
-  IPpkt->ip_sum = 0;
-  IPpkt->ip_src = srcIP;
-  IPpkt->ip_dst = destIP;
-  pkt->icmp_sum = cksum(IPpkt, IPpkt->ip_len);
-
-  return IPpkt;
-}
-*/
 struct sr_packet * sr_createFrame(struct sr_instance* sr,
                                   uint8_t * IPpacket,
                                   unsigned int packet_len,
@@ -144,6 +107,67 @@ void handleEthFrame(struct sr_instance* sr,
     }
 }
 
+
+sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id, uint32_t srcIP, uint32_t destIP){
+        sr_icmp_t11_hdr_t *icmp11Pkt;      /* time exceeded packet */
+        sr_icmp_t3_hdr_t *icmp3Pkt;
+        sr_icmp_hdr_t *icmp0pkt;
+        sr_ip_hdr_t *IPpkt;
+
+        if (type == 0x0c){
+          icmp11Pkt = malloc(sizeof(sr_icmp_t11_hdr_t));
+          icmp11Pkt->icmp_type = type;
+          icmp11Pkt->icmp_code = code;
+          icmp11Pkt->icmp_sum = 0;
+          icmp11Pkt->unused = 0;
+          memcpy(icmp11Pkt->data, data, ICMP_DATA_SIZE);
+          icmp11Pkt->icmp_sum = cksum(icmp11Pkt, sizeof(sr_icmp_t11_hdr_t));
+          IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t11_hdr_t));
+          memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp11Pkt, sizeof(sr_icmp_t11_hdr_t));
+          IPpkt->ip_len = (sizeof(sr_icmp_t11_hdr_t) + sizeof(sr_ip_hdr_t));
+        }
+        else if(type == 0x03){
+          icmp3Pkt = malloc(sizeof(sr_icmp_t3_hdr_t));
+          icmp3Pkt->icmp_type = type;
+          icmp3Pkt->icmp_code = code;
+          icmp3Pkt->icmp_sum = 0;
+          icmp3Pkt->unused = 0;
+          icmp3Pkt->next_mtu = 0;
+          memcpy(icmp3Pkt->data, data, ICMP_DATA_SIZE);
+          icmp3Pkt->icmp_sum = cksum(icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
+          IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
+          memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
+          IPpkt->ip_len = (sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ip_hdr_t));
+        }
+        else if(type == 0){
+          icmp0pkt = malloc(sizeof(sr_icmp_hdr_t));
+          icmp0pkt->icmp_type = type;
+          icmp0pkt->icmp_code = code;
+          icmp0pkt->icmp_sum = 0;
+          icmp0pkt->icmp_sum = cksum(icmp0pkt, sizeof(sr_icmp_hdr_t));
+          IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
+          memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp0pkt, sizeof(sr_icmp_hdr_t));
+          IPpkt->ip_len = (sizeof(sr_icmp_hdr_t) + sizeof(sr_ip_hdr_t));
+        }
+        else
+          printf("ICMP type not recognized\n");
+
+
+        IPpkt->ip_tos = 0;
+        IPpkt->ip_id = id;
+        IPpkt->ip_off = 0;
+        IPpkt->ip_ttl = 0x64;
+        IPpkt->ip_p = ip_protocol_icmp;
+        IPpkt->ip_sum = 0;
+        IPpkt->ip_src = srcIP;
+        IPpkt->ip_dst = destIP;
+        IPpkt->ip_sum = cksum(IPpkt, IPpkt->ip_len);
+
+        return IPpkt;
+}
+
+
+
 void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
   printf("handleIPPacket \n");
   
@@ -176,13 +200,15 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     if (ip_pack->ip_p == ip_protocol_icmp)
     {
     	/* process pings and replies */
-        sr_ip_hdr_t* echoReply = sr_ICMPtoIP(0, 0, 0, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
+        uint8_t data[ICMP_DATA_SIZE] = {0};
+        sr_ip_hdr_t* echoReply = sr_ICMPtoIP(0, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
         sr_send_packet(sr, (uint8_t*)echoReply, echoReply->ip_len, interface);
         free(echoReply);
     }
     else /* TCP or UDP protocol */
     {
-        sr_ip_hdr_t* portUnreach = sr_ICMPtoIP(3, 3, 0, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
+        uint8_t data[ICMP_DATA_SIZE] = {0};
+        sr_ip_hdr_t* portUnreach = sr_ICMPtoIP(3, 3, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
         sr_send_packet(sr, (uint8_t*)portUnreach, portUnreach->ip_len, interface);
         free(portUnreach);
     }    
@@ -194,7 +220,8 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     if (ip_pack->ip_ttl == 0)
     {
       /* send time exceeded icmp message */
-      sr_ip_hdr_t* timeExceed = sr_ICMPtoIP(11, 0, 0, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
+      uint8_t data[ICMP_DATA_SIZE] = {0};
+      sr_ip_hdr_t* timeExceed = sr_ICMPtoIP(11, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
       sr_send_packet(sr, (uint8_t*)timeExceed, timeExceed->ip_len, interface);
       free(timeExceed);
     }
@@ -208,7 +235,8 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     /* if routing entry not found, send ICMP network unreachable message */
     if (entry == NULL)
     {
-      sr_ip_hdr_t* netUnreach = sr_ICMPtoIP(3, 0, 0, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
+      uint8_t data[ICMP_DATA_SIZE] = {0};
+      sr_ip_hdr_t* netUnreach = sr_ICMPtoIP(3, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
       sr_send_packet(sr, (uint8_t*) netUnreach, netUnreach->ip_len, interface);
       free(netUnreach);
     }
