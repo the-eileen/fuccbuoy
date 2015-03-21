@@ -232,6 +232,9 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
       sr_send_packet(sr, (uint8_t*)timeExceed, timeExceed->ip_len, interface);
       free(timeExceed);
     }
+    /* recompute chksum after decrementing ttl */
+    ip_pack->ip_sum = 0;
+    ip_sum = cksum(ip_pack, ip_pack->ip_len);
     struct sr_rt* entry = sr->routing_table;
     while (entry != NULL)
     {
