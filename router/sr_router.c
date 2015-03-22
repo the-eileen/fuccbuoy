@@ -84,7 +84,8 @@ void sendIP(struct sr_instance* sr,
         /* there exists a mapping! send that mofo*/
         memcpy(ether->ether_dhost, result->mac, 6);
         printf("size is %d\n", sizeof(sr_ethernet_hdr_t) + packet_len);
-        printf("SENDING THROUGH SENDIP NAO!! \n");
+        printf("SENDING THROUGH THIS SENDIP NAO!! \n");
+        print_hdrs(frame, sizeof(sr_ethernet_hdr_t) + packet_len);
         sr_send_packet(sr, frame, sizeof(sr_ethernet_hdr_t) + packet_len, iface);
         /* free(frame) */
     }
@@ -150,7 +151,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
         IPpkt->ip_dst = destIP;
         IPpkt->ip_v = 4;
 
-        IPpkt->ip_sum = cksum((const void*)IPpkt, ntohs(IPpkt->ip_len));
+        IPpkt->ip_sum = cksum((const void*)IPpkt, (IPpkt->ip_len));
 
 
         return IPpkt;
