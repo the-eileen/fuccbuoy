@@ -38,7 +38,6 @@
  *---------------------------------------------------------------------*/
 
 
-
 void sr_init(struct sr_instance* sr)
 {
     /* REQUIRES */
@@ -342,8 +341,13 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
       memcpy(reply_arp->ar_tha, arphead->ar_sha, ETHER_ADDR_LEN);
       reply_arp->ar_tip = arphead->ar_sip;
 
+      struct sr_packet *reply_frame = malloc(sizeof(struct sr_packet));
+      reply_frame->buf = (uint8_t*)repPacket;
+      reply_frame->len = sizeof(*repPacket) + sizeof(struct sr_packet);
+      reply_frame->iface = ifIterator->name;
+
       /*send packet function in sr_vns_comm.c*/
-      sr_send_packet(sr, repPacket, sizeof(repPacket), ifIterator->name);
+      sr_send_packet(sr, (uint8_t*)reply_frame, reply_frame->len, reply_frame->iface);
 
     }
     else if(ntohs(arphead->ar_op) == arp_op_reply){
