@@ -311,7 +311,7 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
 
       sr_arp_hdr_t* reply_arp = (sr_arp_hdr_t*) (repPacket + sizeof(sr_ethernet_hdr_t));
       reply_arp->ar_hrd = ntohs(arp_hrd_ethernet);
-      reply_arp->ar_pro = ntohs(ethertype_arp);
+      reply_arp->ar_pro = ntohs(ethertype_ip);
       reply_arp->ar_hln = 0x06;
       reply_arp->ar_pln = 0x04;
       reply_arp->ar_op = ntohs(arp_op_reply);
