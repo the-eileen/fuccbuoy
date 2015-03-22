@@ -150,7 +150,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
         IPpkt->ip_src = srcIP;
         IPpkt->ip_dst = destIP;
 
-        IPpkt->ip_sum = cksum((const void*)IPpkt, ntohs(IPpkt->ip_len));
+        IPpkt->ip_sum = cksum((const void*)IPpkt, (IPpkt->ip_len));
 
 
         return IPpkt;
