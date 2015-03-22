@@ -97,11 +97,12 @@ void sendIP(struct sr_instance* sr,
 }
 
 
-sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id, uint32_t srcIP, uint32_t destIP){
+sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint8_t data[], uint16_t id, uint32_t srcIP, uint32_t destIP){
         sr_icmp_t11_hdr_t *icmp11Pkt;      /* time exceeded packet */
         sr_icmp_t3_hdr_t *icmp3Pkt;
         sr_icmp_hdr_t *icmp0pkt;
         sr_ip_hdr_t *IPpkt;
+        sr_ip_hdr_t *orig = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
 
         if (type == 0x0c){
           icmp11Pkt = malloc(sizeof(sr_icmp_t11_hdr_t));
@@ -126,7 +127,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           icmp3Pkt->icmp_sum = cksum(icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
           IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
-          IPpkt->ip_len = (sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ip_hdr_t));
+          IPpkt->ip_len = ntohs((sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ip_hdr_t)));
         }
         else if(type == 0x00){
           icmp0pkt = malloc(sizeof(sr_icmp_hdr_t));
@@ -136,19 +137,22 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           icmp0pkt->icmp_sum = cksum(icmp0pkt, sizeof(sr_icmp_hdr_t));
           IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp0pkt, sizeof(sr_icmp_hdr_t));
-          IPpkt->ip_len = (sizeof(sr_icmp_hdr_t) + sizeof(sr_ip_hdr_t));
+          /*IPpkt->ip_len = ntohs((sizeof(sr_icmp_hdr_t) + sizeof(sr_ip_hdr_t)));*/
         }
         else
           printf("ICMP type not recognized\n");
 
-        IPpkt->ip_tos = 0;
-        IPpkt->ip_id = id;
-        IPpkt->ip_off = 0;
-        IPpkt->ip_ttl = 0x64;
-        IPpkt->ip_p = ip_protocol_icmp;
+        IPpkt->ip_v = orig->ip_v;
+        IPpkt->ip_hl = orig->ip_hl;
+        IPpkt->ip_tos = orig->ip_tos;
+        IPpkt->ip_id = orig->ip_id;
+        IPpkt->ip_len = orig->ip_len;
+        IPpkt->ip_off = orig->ip_off;
+        IPpkt->ip_ttl = orig->ip_ttl;
+        IPpkt->ip_p = orig->ip_p;
         IPpkt->ip_sum = 0;
-        IPpkt->ip_src = srcIP;
-        IPpkt->ip_dst = destIP;
+        IPpkt->ip_src = orig->ip_dst;
+        IPpkt->ip_dst = orig->ip_src;
 
         IPpkt->ip_sum = cksum((const void*)IPpkt, (IPpkt->ip_len));
 
@@ -200,7 +204,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
 
         uint8_t data[ICMP_DATA_SIZE];
         memcpy(data, ip_pack, ICMP_DATA_SIZE);
-        sr_ip_hdr_t* echoReply = sr_ICMPtoIP(0, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
+        sr_ip_hdr_t* echoReply = sr_ICMPtoIP(packet, 0, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
         sendIP(sr, echoReply, echoReply->ip_len, interface);
         free(echoReply);
     }
@@ -209,7 +213,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
         printf("TCP or UDP protocol\n");
         uint8_t data[ICMP_DATA_SIZE];
         memcpy(data, ip_pack, ICMP_DATA_SIZE);
-        sr_ip_hdr_t* portUnreach = sr_ICMPtoIP(3, 3, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
+        sr_ip_hdr_t* portUnreach = sr_ICMPtoIP(packet, 3, 3, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
         sendIP(sr, portUnreach, portUnreach->ip_len, interface);
         free(portUnreach);
     }    
@@ -225,7 +229,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
       printf("IP packet died... RIP IP\n");
       uint8_t data[ICMP_DATA_SIZE];
       memcpy(data, ip_pack, ICMP_DATA_SIZE);
-      sr_ip_hdr_t* timeExceed = sr_ICMPtoIP(11, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
+      sr_ip_hdr_t* timeExceed = sr_ICMPtoIP(packet, 11, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
       sendIP(sr, timeExceed, timeExceed->ip_len, interface);
       free(timeExceed);
     }
@@ -247,7 +251,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
       printf("Routing entry not found\n");
       uint8_t data[ICMP_DATA_SIZE];
       memcpy(data, ip_pack, ICMP_DATA_SIZE);
-      sr_ip_hdr_t* netUnreach = sr_ICMPtoIP(3, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
+      sr_ip_hdr_t* netUnreach = sr_ICMPtoIP(packet, 3, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
       sendIP(sr, netUnreach, netUnreach->ip_len, interface);
       free(netUnreach);
     }

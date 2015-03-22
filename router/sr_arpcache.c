@@ -10,7 +10,6 @@
 #include "sr_router.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
-#include "sr_icmp.h"
 
 /* 
   This function gets called every second. For each request sent out, we keep
@@ -31,7 +30,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
                 uint8_t data[ICMP_DATA_SIZE];
                 memcpy(data, iphd, ICMP_DATA_SIZE);
                 struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
-                sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(0x03, 1, data, iphd->ip_id, inter->ip, req->ip);
+                sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(req->packets->buf, 0x03, 1, data, iphd->ip_id, inter->ip, req->ip);
                 sendIP(sr, IPpacket, IPpacket->ip_len, req->packets->iface);
                 sr_arpreq_destroy(cache, req);
             }
