@@ -265,7 +265,9 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
 
 void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
   printf("handleARPPacket \n");
-  /**/
+  
+  /*struct sr_packet *srpack = (struct sr_packet*) packet;
+  sr_ethernet_hdr_t* etherhead = (sr_ethernet_hdr_t*) srpack->buf;*/
   sr_ethernet_hdr_t* etherhead = (sr_ethernet_hdr_t*) packet;
   sr_arp_hdr_t *arphead;
   printf("sizeof(sr_ethernet_hdr_t) = %u\n", sizeof(sr_ethernet_hdr_t));
@@ -329,10 +331,16 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
         send a reply */
         printf("oh! oh! It's an arp request! okok let me try! \n");
       uint8_t* repPacket = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+  
       sr_ethernet_hdr_t* reply_ether = (sr_ethernet_hdr_t*) repPacket;
+ 
       memcpy(reply_ether->ether_dhost, etherhead->ether_shost, ETHER_ADDR_LEN);
-      memcpy(reply_ether->ether_shost, etherhead->ether_dhost, ETHER_ADDR_LEN);
+  
+      memcpy(reply_ether->ether_shost, ifIterator->addr, ETHER_ADDR_LEN);
+
       reply_ether->ether_type = ethertype_arp;
+
+
 
       sr_arp_hdr_t* reply_arp = (sr_arp_hdr_t*) reply_ether + sizeof(sr_ethernet_hdr_t);
       reply_arp->ar_hrd = arp_hrd_ethernet;
@@ -345,13 +353,18 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
       memcpy(reply_arp->ar_tha, arphead->ar_sha, ETHER_ADDR_LEN);
       reply_arp->ar_tip = arphead->ar_sip;
 
-      struct sr_packet *reply_frame = malloc(sizeof(struct sr_packet));
-      reply_frame->buf = (uint8_t*)repPacket;
-      reply_frame->len = sizeof(*repPacket) + sizeof(struct sr_packet);
-      reply_frame->iface = ifIterator->name;
 
+      /*struct sr_packet *reply_frame = malloc(sizeof(struct sr_packet));
+      reply_frame->buf = (uint8_t*)reply_ether;
+      reply_frame->len = sizeof(*repPacket) + sizeof(struct sr_packet);
+      reply_frame->iface = ifIterator->name;*/
+
+      print_hdrs(repPacket, sizeof(*repPacket));
+
+      printf("before sending \n");
       /*send packet function in sr_vns_comm.c*/
-      sr_send_packet(sr, (uint8_t*)reply_frame, reply_frame->len, reply_frame->iface);
+      sr_send_packet(sr, repPacket, 16, ifIterator->name);
+      printf("after sending \n");
 
     }
     else if(ntohs(arphead->ar_op) == arp_op_reply){
