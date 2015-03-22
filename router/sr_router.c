@@ -169,15 +169,17 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
 void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
   printf("handleIPPacket \n");
   
-  sr_ip_hdr_t* ip_pack = (sr_ip_hdr_t*) packet; 
+  sr_ip_hdr_t* ip_pack = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t)); 
   
   /*verify checksum before proceeding further*/
   uint16_t original_chksum = ip_pack->ip_sum;
   ip_pack->ip_sum = 0;
-  uint16_t computed_chksum = 0;
-  computed_chksum = cksum((const void*)ip_pack, ip_pack->ip_len);
+  uint16_t computed_chksum = cksum(ip_pack, ntohs(ip_pack->ip_len));
+  /*computed_chksum = cksum(ip_pack, ip_pack->ip_len);*/
   if (computed_chksum != original_chksum)
   {
+    printf("computed checksum is %u\n", computed_chksum);
+    printf("OG checksum is %u\n", original_chksum);
     printf("CHECKSUM FAILED \n");
     return;				/*drop the packet*/
   }
