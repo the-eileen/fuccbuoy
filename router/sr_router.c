@@ -103,6 +103,8 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t r
     /*  sr_icmp_t11_hdr_t *icmp11Pkt; 
         sr_icmp_t3_hdr_t *icmp3Pkt;
         sr_icmp_hdr_t *icmp0pkt;*/
+	if (type == 0) /* echo reply */
+	  len = 0;
         printf("We malloc %d for icmp len\n", len);
         sr_icmp_hdr_t* icmp = malloc(sizeof(sr_icmp_hdr_t) + len);
         sr_ip_hdr_t *IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + len);
@@ -169,7 +171,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t r
 
         IPpkt->ip_sum = cksum((const void*)IPpkt, sizeof(sr_ip_hdr_t));
 
-	printf("Size of IMCPtoIP packet is %d", ntohs(IPpkt->ip_len));
+	printf("Size of ICMPtoIP packet is %d\n", ntohs(IPpkt->ip_len));
         return IPpkt;
 }
 

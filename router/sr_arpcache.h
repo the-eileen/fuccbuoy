@@ -153,5 +153,5 @@ void sendIP(struct sr_instance* sr,
                                   unsigned int packet_len, /*should include length of all ICMP data*/
                                   char * iface);
 
-sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint8_t data[], uint16_t id, uint32_t srcIP, uint32_t destIP);
+sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t rest, uint8_t* data, int len);
 #endif
