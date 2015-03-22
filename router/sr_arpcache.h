@@ -148,8 +148,8 @@ int   sr_arpcache_init(struct sr_arpcache *cache);
 int   sr_arpcache_destroy(struct sr_arpcache *cache);
 void *sr_arpcache_timeout(void *cache_ptr);
 
-struct sr_packet * sr_createFrame(struct sr_instance* sr,
-                                  uint8_t * IPpacket,
-                                  unsigned int packet_len,
+void sendIP(struct sr_instance* sr,
+                                  sr_ip_hdr_t * IPpacket,
+                                  unsigned int packet_len, /*should include length of all ICMP data*/
                                   char * iface);
 #endif
