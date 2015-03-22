@@ -138,7 +138,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
           IPpkt->ip_len = (sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ip_hdr_t));
         }
-        else if(type == 0){
+        else if(type == 0x00){
           icmp0pkt = malloc(sizeof(sr_icmp_hdr_t));
           icmp0pkt->icmp_type = type;
           icmp0pkt->icmp_code = code;
@@ -159,7 +159,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
         IPpkt->ip_sum = 0;
         IPpkt->ip_src = srcIP;
         IPpkt->ip_dst = destIP;
-        IPpkt->ip_sum = cksum((const void*)IPpkt, IPpkt->ip_len);
+        IPpkt->ip_sum = cksum((const void*)IPpkt, ntohs(IPpkt->ip_len));
 
         return IPpkt;
 }
@@ -203,7 +203,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     if (ip_pack->ip_p == ip_protocol_icmp)
     {
     	/* process pings and replies */
-        printf("received a ping");
+        printf("received a ping\n");
         uint8_t data[ICMP_DATA_SIZE];
         memcpy(data, ip_pack, ICMP_DATA_SIZE);
         sr_ip_hdr_t* echoReply = sr_ICMPtoIP(0, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
@@ -213,6 +213,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     }
     else /* TCP or UDP protocol */
     {
+        printf("TCP or UDP protocol\n");
         uint8_t data[ICMP_DATA_SIZE];
         memcpy(data, ip_pack, ICMP_DATA_SIZE);
         sr_ip_hdr_t* portUnreach = sr_ICMPtoIP(3, 3, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
@@ -238,7 +239,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     }
     /* recompute chksum after decrementing ttl */
     ip_pack->ip_sum = 0;
-    ip_pack->ip_sum = cksum((const void*)ip_pack, ip_pack->ip_len);
+    ip_pack->ip_sum = cksum((const void*)ip_pack, ntohs(ip_pack->ip_len));
     struct sr_rt* entry = sr->routing_table;
     while (entry != NULL)
     {
