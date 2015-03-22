@@ -120,7 +120,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           icmp11Pkt->icmp_sum = 0;
           icmp11Pkt->unused = 0;
           memcpy(icmp11Pkt->data, data, ICMP_DATA_SIZE);
-          icmp11Pkt->icmp_sum = cksum(icmp11Pkt, sizeof(sr_icmp_t11_hdr_t));
+          icmp11Pkt->icmp_sum = cksum((const void*)icmp11Pkt, sizeof(sr_icmp_t11_hdr_t));
           IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t11_hdr_t));
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp11Pkt, sizeof(sr_icmp_t11_hdr_t));
           IPpkt->ip_len = (sizeof(sr_icmp_t11_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -133,7 +133,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           icmp3Pkt->unused = 0;
           icmp3Pkt->next_mtu = 0;
           memcpy(icmp3Pkt->data, data, ICMP_DATA_SIZE);
-          icmp3Pkt->icmp_sum = cksum(icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
+          icmp3Pkt->icmp_sum = cksum((const void*)icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
           IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
           IPpkt->ip_len = (sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -143,7 +143,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           icmp0pkt->icmp_type = type;
           icmp0pkt->icmp_code = code;
           icmp0pkt->icmp_sum = 0;
-          icmp0pkt->icmp_sum = cksum(icmp0pkt, sizeof(sr_icmp_hdr_t));
+          icmp0pkt->icmp_sum = cksum((const void*)icmp0pkt, sizeof(sr_icmp_hdr_t));
           IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp0pkt, sizeof(sr_icmp_hdr_t));
           IPpkt->ip_len = (sizeof(sr_icmp_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -159,7 +159,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
         IPpkt->ip_sum = 0;
         IPpkt->ip_src = srcIP;
         IPpkt->ip_dst = destIP;
-        IPpkt->ip_sum = cksum(IPpkt, IPpkt->ip_len);
+        IPpkt->ip_sum = cksum((const void*)IPpkt, IPpkt->ip_len);
 
         return IPpkt;
 }
@@ -175,7 +175,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
   uint16_t original_chksum = ip_pack->ip_sum;
   ip_pack->ip_sum = 0;
   uint16_t computed_chksum = 0;
-  computed_chksum = cksum((const void*)ip_pack, ip_pack->ip_len);
+  computed_chksum = cksum((const void*)packet, ip_pack->ip_len);
   if (computed_chksum != original_chksum)
   {
     printf("CHECKSUM FAILED \n");
@@ -236,7 +236,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     }
     /* recompute chksum after decrementing ttl */
     ip_pack->ip_sum = 0;
-    ip_pack->ip_sum = cksum(ip_pack, ip_pack->ip_len);
+    ip_pack->ip_sum = cksum((const void*)packet, ip_pack->ip_len);
     struct sr_rt* entry = sr->routing_table;
     while (entry != NULL)
     {
