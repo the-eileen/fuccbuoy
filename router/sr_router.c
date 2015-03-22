@@ -60,49 +60,35 @@ void sr_init(struct sr_instance* sr)
 
 
 
-struct sr_packet * sr_createFrame(struct sr_instance* sr,
-                                  uint8_t * IPpacket,
-                                  unsigned int packet_len,
+void sendIP(struct sr_instance* sr,
+                                  sr_ip_hdr_t * IPpacket,
+                                  unsigned int packet_len, /*should include length of all ICMP data*/
                                   char * iface)
-{ /*CONFUSING: sr_packet is an ethernet frame.  This function takes in IP packets*/
-    struct sr_packet *new_pkt = (struct sr_packet *)malloc(sizeof(struct sr_packet));
-    new_pkt-> buf = (uint8_t *)malloc(packet_len + 14); /*14 bytes; 6 for dest, 6 for src, 2 for ethtype*/
+{ /*CONFUSING: sr_packet is NOT an ethernet frame. An ethernet frame is an ethernet frame. This function takes in IP packets*/
+    uint8_t *frame = malloc(sizeof(sr_ethernet_hdr_t) + packet_len);
+    sr_ethernet_hdr_t *ether = (sr_ethernet_hdr_t*) frame;
+    struct sr_if* interf = sr_get_interface(sr, iface);
 
-    memcpy((new_pkt->buf) + 14, IPpacket, packet_len);
-    new_pkt->len = packet_len + 14;
-    new_pkt->iface = (char*)malloc(sr_IFACE_NAMELEN);
-    strncpy(new_pkt->iface, iface, sr_IFACE_NAMELEN);
+    memcpy(ether->ether_shost, interf->addr, ETHER_ADDR_LEN);
+    ether->ether_type = ntohs(ethertype_ip);
 
-    struct sr_if* interfaceThing = sr_get_interface(sr, iface);
+    sr_ip_hdr_t *iphdr = (sr_ip_hdr_t*) (frame + sizeof(sr_ethernet_hdr_t));
+    memcpy(iphdr, IPpacket, packet_len);
 
-    memset((new_pkt->buf) + 8, 2048, 2); /*bytes are ezpz*/
-    memcpy((new_pkt->buf) + 6, interfaceThing->addr, 6);
-    /* next field not filled out */
-    /* can just call queue req */
-    return new_pkt;
-}
-
-void handleEthFrame(struct sr_instance* sr,
-                    struct sr_arpcache *cache,
-                    struct sr_packet * frame,
-                    char * iface)
-{
     /*check whether it's in the cache*/
-    uint32_t destIP;
-    memcpy(&destIP, (frame->buf)+30, 4);
-
-    struct sr_arpentry * result = sr_arpcache_lookup(cache, destIP);
+  
+    struct sr_arpentry * result = sr_arpcache_lookup(&sr->cache, iphdr->ip_dst);
     if(result != NULL)
     {
         /* there exists a mapping! send that mofo*/
-        memcpy(frame->buf, result->mac, 6);
-        sr_send_packet(sr, frame->buf, frame->len, iface);
+        memcpy(ether->ether_dhost, result->mac, 6);
+        sr_send_packet(sr, frame, sizeof(sr_ethernet_hdr_t) + packet_len, iface);
         /* free(frame) */
     }
     else
     {
         /*no mapping RIPPERINO */
-        sr_arpcache_queuereq(&sr->cache, destIP, frame->buf, frame->len, iface);
+        sr_arpcache_queuereq(&sr->cache, iphdr->ip_dst, frame, sizeof(sr_ethernet_hdr_t) + packet_len, iface);
     }
 }
 
@@ -120,7 +106,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           icmp11Pkt->icmp_sum = 0;
           icmp11Pkt->unused = 0;
           memcpy(icmp11Pkt->data, data, ICMP_DATA_SIZE);
-          icmp11Pkt->icmp_sum = cksum((const void*)icmp11Pkt, sizeof(sr_icmp_t11_hdr_t));
+          icmp11Pkt->icmp_sum = cksum(icmp11Pkt, sizeof(sr_icmp_t11_hdr_t));
           IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t11_hdr_t));
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp11Pkt, sizeof(sr_icmp_t11_hdr_t));
           IPpkt->ip_len = (sizeof(sr_icmp_t11_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -133,7 +119,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           icmp3Pkt->unused = 0;
           icmp3Pkt->next_mtu = 0;
           memcpy(icmp3Pkt->data, data, ICMP_DATA_SIZE);
-          icmp3Pkt->icmp_sum = cksum((const void*)icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
+          icmp3Pkt->icmp_sum = cksum(icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
           IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp3Pkt, sizeof(sr_icmp_t3_hdr_t));
           IPpkt->ip_len = (sizeof(sr_icmp_t3_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -143,7 +129,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
           icmp0pkt->icmp_type = type;
           icmp0pkt->icmp_code = code;
           icmp0pkt->icmp_sum = 0;
-          icmp0pkt->icmp_sum = cksum((const void*)icmp0pkt, sizeof(sr_icmp_hdr_t));
+          icmp0pkt->icmp_sum = cksum(icmp0pkt, sizeof(sr_icmp_hdr_t));
           IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
           memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp0pkt, sizeof(sr_icmp_hdr_t));
           IPpkt->ip_len = (sizeof(sr_icmp_hdr_t) + sizeof(sr_ip_hdr_t));
@@ -159,7 +145,9 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
         IPpkt->ip_sum = 0;
         IPpkt->ip_src = srcIP;
         IPpkt->ip_dst = destIP;
+
         IPpkt->ip_sum = cksum((const void*)IPpkt, ntohs(IPpkt->ip_len));
+
 
         return IPpkt;
 }
@@ -174,8 +162,8 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
   /*verify checksum before proceeding further*/
   uint16_t original_chksum = ip_pack->ip_sum;
   ip_pack->ip_sum = 0;
-  uint16_t computed_chksum = 0;
-  computed_chksum = cksum(ip_pack, ntohs(ip_pack->ip_len));
+  uint16_t computed_chksum = cksum(ip_pack, ntohs(ip_pack->ip_len));
+  /*computed_chksum = cksum(ip_pack, ip_pack->ip_len);*/
   if (computed_chksum != original_chksum)
   {
     printf("computed checksum is %u\n", computed_chksum);
@@ -203,7 +191,9 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     if (ip_pack->ip_p == ip_protocol_icmp)
     {
     	/* process pings and replies */
+
         printf("received a ping\n");
+
         uint8_t data[ICMP_DATA_SIZE];
         memcpy(data, ip_pack, ICMP_DATA_SIZE);
         sr_ip_hdr_t* echoReply = sr_ICMPtoIP(0, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
@@ -240,7 +230,9 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     }
     /* recompute chksum after decrementing ttl */
     ip_pack->ip_sum = 0;
+
     ip_pack->ip_sum = cksum((const void*)ip_pack, ntohs(ip_pack->ip_len));
+
     struct sr_rt* entry = sr->routing_table;
     while (entry != NULL)
     {
