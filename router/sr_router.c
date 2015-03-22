@@ -338,7 +338,7 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   
       memcpy(reply_ether->ether_shost, ifIterator->addr, ETHER_ADDR_LEN);
 
-      reply_ether->ether_type = ethertype_arp;
+      reply_ether->ether_type = ntohs(ethertype_arp);
 
 
 
@@ -359,11 +359,12 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
       reply_frame->len = sizeof(*repPacket) + sizeof(struct sr_packet);
       reply_frame->iface = ifIterator->name;*/
 
-      print_hdrs(repPacket, sizeof(*repPacket));
+      print_hdrs(repPacket, len);
+      printf("iface is %s\n", ifIterator->name);
 
       printf("before sending \n");
       /*send packet function in sr_vns_comm.c*/
-      sr_send_packet(sr, repPacket, 16, ifIterator->name);
+      sr_send_packet(sr, repPacket, len, ifIterator->name);
       printf("after sending \n");
 
     }
