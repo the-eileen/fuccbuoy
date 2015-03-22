@@ -270,7 +270,7 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   sr_ethernet_hdr_t* etherhead = (sr_ethernet_hdr_t*) srpack->buf;*/
   sr_ethernet_hdr_t* etherhead = (sr_ethernet_hdr_t*) packet;
   sr_arp_hdr_t *arphead;
-  printf("sizeof(sr_ethernet_hdr_t) = %u\n", sizeof(sr_ethernet_hdr_t));
+  /*printf("sizeof(sr_ethernet_hdr_t) = %u\n", sizeof(sr_ethernet_hdr_t));*/
   arphead = (sr_arp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
   /*int match = 0;*/
    /*check if target IP matches one of your routers*/
@@ -419,8 +419,8 @@ void sr_handlepacket(struct sr_instance* sr,
   printf("*** -> Received packet of length %d \n",len);
   print_hdrs(packet, len);
   /*determine type of packet contained in ethernet frame*/
-  sr_ethernet_hdr_t *header;
-  header = (sr_ethernet_hdr_t*) packet;
+  /*sr_ethernet_hdr_t *header;
+  header = (sr_ethernet_hdr_t*) packet;*/
   uint16_t type = ethertype(packet);
   if(type == ethertype_ip)
   {
