@@ -152,7 +152,6 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t type, uint8_t code, uint8_t data[], uint16_t id
         else
           printf("ICMP type not recognized\n");
 
-
         IPpkt->ip_tos = 0;
         IPpkt->ip_id = id;
         IPpkt->ip_off = 0;
@@ -207,7 +206,8 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
         uint8_t data[ICMP_DATA_SIZE];
         memcpy(data, ip_pack, ICMP_DATA_SIZE);
         sr_ip_hdr_t* echoReply = sr_ICMPtoIP(0, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
-        sr_send_packet(sr, (uint8_t*)echoReply, echoReply->ip_len, interface);
+        struct sr_packet* frame = sr_createFrame(sr, (uint8_t*) echoReply, echoReply->ip_len, interface);
+        handleEthFrame(sr, &(sr->cache), frame, interface);         
         free(echoReply);
     }
     else /* TCP or UDP protocol */
@@ -215,12 +215,14 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
         uint8_t data[ICMP_DATA_SIZE];
         memcpy(data, ip_pack, ICMP_DATA_SIZE);
         sr_ip_hdr_t* portUnreach = sr_ICMPtoIP(3, 3, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
-        sr_send_packet(sr, (uint8_t*)portUnreach, portUnreach->ip_len, interface);
+        struct sr_packet* frame = sr_createFrame(sr, (uint8_t*) portUnreach, portUnreach->ip_len, interface);
+        handleEthFrame(sr, &(sr->cache), frame, interface);       
         free(portUnreach);
     }    
   }
   else
   {
+    printf("Not Dest\n");
     /* fill in code to handle regular IP packets */
     ip_pack->ip_ttl--;
     if (ip_pack->ip_ttl == 0)
@@ -229,7 +231,8 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
       uint8_t data[ICMP_DATA_SIZE];
       memcpy(data, ip_pack, ICMP_DATA_SIZE);
       sr_ip_hdr_t* timeExceed = sr_ICMPtoIP(11, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
-      sr_send_packet(sr, (uint8_t*)timeExceed, timeExceed->ip_len, interface);
+      struct sr_packet* frame = sr_createFrame(sr, (uint8_t*) timeExceed, timeExceed->ip_len, interface);
+      handleEthFrame(sr, &(sr->cache), frame, interface);
       free(timeExceed);
     }
     /* recompute chksum after decrementing ttl */
@@ -248,14 +251,15 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
       uint8_t data[ICMP_DATA_SIZE];
       memcpy(data, ip_pack, ICMP_DATA_SIZE);
       sr_ip_hdr_t* netUnreach = sr_ICMPtoIP(3, 0, data, ip_pack->ip_id, ip_pack->ip_dst, ip_pack->ip_src);
-      sr_send_packet(sr, (uint8_t*) netUnreach, netUnreach->ip_len, interface);
+      struct sr_packet* frame = sr_createFrame(sr, (uint8_t*) netUnreach, netUnreach->ip_len, interface);
+      handleEthFrame(sr, &(sr->cache), frame, interface); 
       free(netUnreach);
     }
     /* else get MAC of next hop */
     else
     {
-      struct sr_packet* ethFrame = sr_createFrame(sr, (uint8_t*)ip_pack, ip_pack->ip_len, interface);
-      handleEthFrame(sr, &(sr->cache), ethFrame, interface);
+      struct sr_packet* frame = sr_createFrame(sr, (uint8_t*)ip_pack, ip_pack->ip_len, interface);
+      handleEthFrame(sr, &(sr->cache), frame, interface);
     }
   }
 }
