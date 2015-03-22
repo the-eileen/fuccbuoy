@@ -316,6 +316,7 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
       memcpy(reply_arp->ar_tha, arphead->ar_sha, ETHER_ADDR_LEN);
       reply_arp->ar_tip = arphead->ar_sip;
 
+      sr_arpcache_insert(&(sr->cache),arphead->ar_sha, arphead->ar_sip);
 
       /*struct sr_packet *reply_frame = malloc(sizeof(struct sr_packet));
       reply_frame->buf = (uint8_t*)reply_ether;
