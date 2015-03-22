@@ -277,53 +277,20 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   
 
   struct sr_if* ifIterator = sr->if_list;
-  int n = 0;
-  while(ifIterator->next){
-    n++; /*keeps track of how many elements there are*/
+  struct sr_if* bestIfNA = NULL;
+  uint32_t ipAddr = arphead->ar_tip;
+  uint32_t datXorDoe = 0;
+  uint32_t curMin = 0;
+  while(ifIterator != NULL){
+    datXorDoe = ipAddr ^ ifIterator->ip;
+    if(datXorDoe < curMin || bestIfNA == NULL)
+    {
+        curMin = datXorDoe;
+        bestIfNA = ifIterator;
+    }
     ifIterator = ifIterator->next;
     }
-  uint32_t xorArray [n]; /*array the size of n IPs*/
-  int leadingZeros  [n];
-
-  ifIterator = sr->if_list;
-  int i = 0;
-  while(ifIterator->next){
-    memset(&(xorArray[i]), (ifIterator->ip ^ arphead->ar_tip), 4);
-    ifIterator  = ifIterator->next;
-    i++;
-  }
-  int j;
-  for(i = 0; i < n; i++)
-  {
-    for(j = 0; j < 32; j++)
-    {
-      leadingZeros[i] = 32; /*if there's no matches*/
-      if(xorArray[i] & (1 << 31))
-      {
-        leadingZeros[i] = j;
-        break;
-      }
-      else
-      {
-        xorArray[i] = xorArray[i] << 1;
-      }
-    }
-  }
-  int currentMin = 33;
-  int minIndex = 0;
-  for(i = 0; i < n; i++)
-  {
-    if(leadingZeros[i] < currentMin)
-    {
-      currentMin = leadingZeros[i];
-      minIndex = i;
-    }
-  }
-  ifIterator = sr->if_list;
-  for(i = 0; i < minIndex; i++)
-  {
-    ifIterator = ifIterator->next;
-  }
+    ifIterator = bestIfNA;
     printf("arphead->ar_op) = %u\n", arphead->ar_op);
     printf("ntohs(aprhead->ar_op) = %u\n", ntohs(arphead->ar_op)); 
     if(ntohs(arphead->ar_op) == arp_op_request){
