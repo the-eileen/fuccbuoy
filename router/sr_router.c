@@ -218,7 +218,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
         printf("received a ping\n");
 	sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
         sr_ip_hdr_t* echoReply = sr_ICMPtoIP(packet, 0, 0, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), ICMP_DATA_SIZE);
-        sendIP(sr, echoReply, sizeof(sr_icmp_hdr_t), interface);
+        sendIP(sr, echoReply, ntohs(echoReply->ip_len), interface);
         free(echoReply);
     }
     else /* TCP or UDP protocol */
