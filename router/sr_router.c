@@ -234,7 +234,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     }
     /* recompute chksum after decrementing ttl */
     ip_pack->ip_sum = 0;
-    ip_sum = cksum(ip_pack, ip_pack->ip_len);
+    ip_pack->ip_sum = cksum(ip_pack, ip_pack->ip_len);
     struct sr_rt* entry = sr->routing_table;
     while (entry != NULL)
     {
@@ -263,9 +263,10 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
 void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface){
   printf("handleARPPacket \n");
   /**/
-  sr_arp_hdr_t *arphead;
   sr_ethernet_hdr_t* etherhead = (sr_ethernet_hdr_t*) packet;
-  arphead = (sr_arp_hdr_t*) etherhead + sizeof(sr_ethernet_hdr_t);
+  sr_arp_hdr_t *arphead;
+  printf("sizeof(sr_ethernet_hdr_t) = %u\n", sizeof(sr_ethernet_hdr_t));
+  arphead = (sr_arp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
   /*int match = 0;*/
    /*check if target IP matches one of your routers*/
   
@@ -318,8 +319,8 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
   {
     ifIterator = ifIterator->next;
   }
-
-    
+    printf("arphead->ar_op) = %u\n", arphead->ar_op);
+    printf("ntohs(aprhead->ar_op) = %u\n", ntohs(arphead->ar_op)); 
     if(ntohs(arphead->ar_op) == arp_op_request){
       /*handle ARP requests
         send a reply */
@@ -345,9 +346,10 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
       sr_send_packet(sr, repPacket, sizeof(repPacket), ifIterator->name);
 
     }
-    else if(arphead->ar_op == arp_op_reply){
+    else if(ntohs(arphead->ar_op) == arp_op_reply){
       /*handle ARP replies
         cache the request */
+      printf("received an ARP reply!\n");
         struct sr_arpreq* insertedARP = sr_arpcache_insert(&(sr->cache),
                                                            arphead-> ar_sha,
                                                            arphead->ar_sip);
@@ -363,13 +365,8 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
         }
 
     }
+    printf("End of handling ARP packet\n");
 }
-
-bool isIMCP(struct sr_instance* sr, uint8_t * packet, unsigned int len, char* interface)
-{
-  return true; 
-}
-
 
 /*---------------------------------------------------------------------
  * Method: sr_handlepacket(uint8_t* p,char* interface)
