@@ -27,11 +27,10 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
                 /*send ICMP not reachable*/
                 sr_ethernet_hdr_t *ethhd = (sr_ethernet_hdr_t*) req->packets->buf;
                 sr_ip_hdr_t *iphd = (sr_ip_hdr_t*) ethhd + sizeof(sr_ethernet_hdr_t);
-                uint8_t data[ICMP_DATA_SIZE];
-                memcpy(data, iphd, ICMP_DATA_SIZE);
+                sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (ethhd + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
                 struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
-                sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(req->packets->buf, 0x03, 1, data, iphd->ip_id, inter->ip, req->ip);
-                sendIP(sr, IPpacket, IPpacket->ip_len, req->packets->iface);
+                sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(req->packets->buf, 0x03, 1, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), ICMP_DATA_SIZE);
+                sendIP(sr, IPpacket, sizeof(sr_icmp_hdr_t) + ICMP_DATA_SIZE, req->packets->iface);
                 sr_arpreq_destroy(cache, req);
             }
             else{
