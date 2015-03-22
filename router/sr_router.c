@@ -80,8 +80,11 @@ void sendIP(struct sr_instance* sr,
     struct sr_arpentry * result = sr_arpcache_lookup(&sr->cache, iphdr->ip_dst);
     if(result != NULL)
     {
+
         /* there exists a mapping! send that mofo*/
         memcpy(ether->ether_dhost, result->mac, 6);
+        printf("size is %d\n", sizeof(sr_ethernet_hdr_t) + packet_len);
+        printf("SENDING THROUGH SENDIP NAO!! \n");
         sr_send_packet(sr, frame, sizeof(sr_ethernet_hdr_t) + packet_len, iface);
         /* free(frame) */
     }
@@ -341,6 +344,7 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
             while(packetPointer != NULL)
             {
                 memcpy(packetPointer->buf, arphead->ar_sha, ETHER_ADDR_LEN);
+                printf("LOOKIT MEEEE \n");
                 sr_send_packet(sr, packetPointer->buf, packetPointer->len, interface);
                 packetPointer = packetPointer->next;
             }

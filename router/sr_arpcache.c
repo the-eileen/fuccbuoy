@@ -56,7 +56,8 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
               req_arp->ar_tip = req->ip;
 
               /*send packet function in sr_vns_comm.c*/
-              sr_send_packet(sr, reqPacket, sizeof(reqPacket), inter->name);
+              printf("are you fucking here do not have sex here please \n");
+              sr_send_packet(sr, reqPacket, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), inter->name);
 
 
 
