@@ -175,7 +175,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
   uint16_t original_chksum = ip_pack->ip_sum;
   ip_pack->ip_sum = 0;
   uint16_t computed_chksum = 0;
-  uint16_t computed_chksum = cksum(ip_pack, ntohs(ip_pack->ip_len));
+  computed_chksum = cksum(ip_pack, ntohs(ip_pack->ip_len));
   if (computed_chksum != original_chksum)
   {
     printf("computed checksum is %u\n", computed_chksum);
