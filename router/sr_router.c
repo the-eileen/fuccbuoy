@@ -87,8 +87,10 @@ void sendIP(struct sr_instance* sr,
         printf("SENDING THROUGH THIS SENDIP NAO!! \n");
         print_hdrs(frame, sizeof(sr_ethernet_hdr_t) + packet_len);
         sr_send_packet(sr, frame, sizeof(sr_ethernet_hdr_t) + packet_len, iface);
+        printf("okey dokey ipsent it out\n");
         free(frame);
     }
+
     else
     {
         /*no mapping RIPPERINO */
@@ -106,19 +108,16 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t r
 	if (type == 0) /* echo reply */
 	  len = 0;
         printf("We malloc %d for icmp len\n", len);
-        sr_icmp_hdr_t* icmp = malloc(sizeof(sr_icmp_hdr_t) + len);
-        sr_ip_hdr_t *IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + len);
-        sr_ip_hdr_t *orig = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
+        sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
+        sr_ip_hdr_t *IPpkt = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
+   
 	
 	icmp->icmp_type = type;
 	icmp->icmp_code = code;
-	icmp->icmp_idseq = rest;
-	memcpy(icmp + sizeof(sr_icmp_hdr_t), data, len);
+
 	icmp->icmp_sum = 0;
-	icmp->icmp_sum = cksum(icmp, sizeof(sr_icmp_hdr_t) + len);
-        memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp, sizeof(sr_icmp_hdr_t) + len);
-        /*
-        if (type == 0x0c){
+	icmp->icmp_sum = cksum(icmp, sizeof(sr_icmp_hdr_t));
+        /*if (type == 0x0c){
           icmp11Pkt = malloc(sizeof(sr_icmp_t11_hdr_t));
           icmp11Pkt->icmp_type = type;
           icmp11Pkt->icmp_code = code;
@@ -157,22 +156,16 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t r
           printf("ICMP type not recognized\n");
 	*/
 
-        IPpkt->ip_v = orig->ip_v;
-        IPpkt->ip_hl = orig->ip_hl;
-        IPpkt->ip_tos = orig->ip_tos;
-        IPpkt->ip_id = orig->ip_id;
-        IPpkt->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + len);
-        IPpkt->ip_off = orig->ip_off;
-        IPpkt->ip_ttl = orig->ip_ttl;
-        IPpkt->ip_p = orig->ip_p;
         IPpkt->ip_sum = 0;
-        IPpkt->ip_src = orig->ip_dst;
-        IPpkt->ip_dst = orig->ip_src;
+        uint32_t temp = IPpkt->ip_src;
+        IPpkt->ip_src = IPpkt->ip_dst;
+        IPpkt->ip_dst = temp;
 
-        IPpkt->ip_sum = cksum((const void*)IPpkt, sizeof(sr_ip_hdr_t));
+        IPpkt->ip_sum = cksum(IPpkt, sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
 
 	printf("Size of ICMPtoIP packet is %d\n", ntohs(IPpkt->ip_len));
         return IPpkt;
+
 }
 
 
@@ -219,7 +212,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
 	sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
         sr_ip_hdr_t* echoReply = sr_ICMPtoIP(packet, 0, 0, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), ICMP_DATA_SIZE);
         sendIP(sr, echoReply, ntohs(echoReply->ip_len), interface);
-        free(echoReply);
+        /*free(echoReply);*/
     }
     else /* TCP or UDP protocol */
     {
