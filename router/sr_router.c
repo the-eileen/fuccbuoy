@@ -75,6 +75,9 @@ void sendIP(struct sr_instance* sr,
     sr_ip_hdr_t *iphdr = (sr_ip_hdr_t*) (frame + sizeof(sr_ethernet_hdr_t));
     memcpy(iphdr, IPpacket, packet_len);
 
+    printf("at this point wanted ip seems to be");
+    print_addr_ip_int(ntohl(iphdr->ip_dst));
+    printf("\n");
     /*check whether it's in the cache*/
   
     struct sr_arpentry * result = sr_arpcache_lookup(&sr->cache, iphdr->ip_dst);
@@ -94,7 +97,7 @@ void sendIP(struct sr_instance* sr,
     else
     {
         /*no mapping RIPPERINO */
-        sr_arpcache_queuereq(&sr->cache, iphdr->ip_dst, frame, sizeof(sr_ethernet_hdr_t) + packet_len, iface);
+        sr_arpcache_queuereq(&sr->cache, iphdr->ip_dst, frame, sizeof(sr_ethernet_hdr_t) + IPpacket->ip_len, iface);
     }
 }
 
@@ -325,11 +328,6 @@ void sr_handleARPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int l
       reply_arp->ar_tip = arphead->ar_sip;
 
       sr_arpcache_insert(&(sr->cache),arphead->ar_sha, arphead->ar_sip);
-
-      /*struct sr_packet *reply_frame = malloc(sizeof(struct sr_packet));
-      reply_frame->buf = (uint8_t*)reply_ether;
-      reply_frame->len = sizeof(*repPacket) + sizeof(struct sr_packet);
-      reply_frame->iface = ifIterator->name;*/
 
       print_hdrs(repPacket, len);
       printf("iface is %s\n", ifIterator->name);

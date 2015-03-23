@@ -10,6 +10,7 @@
 #include "sr_router.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
+#include "sr_utils.h"
 
 /* 
   This function gets called every second. For each request sent out, we keep
@@ -35,26 +36,27 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             }
             else{
                 /*send the arprequest*/
-                uint8_t* reqPacket = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+                uint8_t* reqPacket = req->packets->buf;
                 struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
-              sr_ethernet_hdr_t* req_ether = (sr_ethernet_hdr_t*) reqPacket;
+              sr_ethernet_hdr_t* req_ether = (sr_ethernet_hdr_t*) req->packets->buf;
               memset(req_ether->ether_dhost, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
               memcpy(req_ether->ether_shost, inter->addr, ETHER_ADDR_LEN);
-              req_ether->ether_type = ethertype_arp;
+              req_ether->ether_type = ntohs(ethertype_arp);
 
-              sr_arp_hdr_t* req_arp = (sr_arp_hdr_t*) req_ether + sizeof(sr_ethernet_hdr_t);
-              req_arp->ar_hrd = arp_hrd_ethernet;
-              req_arp->ar_pro = ethertype_arp;
+              sr_arp_hdr_t* req_arp = (sr_arp_hdr_t*) (req->packets->buf + sizeof(sr_ethernet_hdr_t));
+              req_arp->ar_hrd = ntohs(arp_hrd_ethernet);
+              req_arp->ar_pro = ntohs(ethertype_ip);
               req_arp->ar_hln = 0x06;
               req_arp->ar_pln = 0x04;
-              req_arp->ar_op = arp_op_request;
+              req_arp->ar_op = ntohs(arp_op_request);
               memcpy(req_arp->ar_sha, inter->addr, ETHER_ADDR_LEN);
               req_arp->ar_sip = inter->ip;
-              
+              memset(req_arp->ar_tha, 0x000000000000, ETHER_ADDR_LEN);
               req_arp->ar_tip = req->ip;
 
               /*send packet function in sr_vns_comm.c*/
               printf("are you fucking here do not have sex here please \n");
+              print_hdrs(reqPacket, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
               sr_send_packet(sr, reqPacket, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), inter->name);
 
 
