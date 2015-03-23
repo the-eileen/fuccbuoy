@@ -26,9 +26,9 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
             if(req->times_sent >= 5){
                 /*send ICMP not reachable*/
                 sr_ethernet_hdr_t *ethhd = (sr_ethernet_hdr_t*) req->packets->buf;
-                sr_ip_hdr_t *iphd = (sr_ip_hdr_t*) ethhd + sizeof(sr_ethernet_hdr_t);
+                /*sr_ip_hdr_t *iphd = (sr_ip_hdr_t*) ethhd + sizeof(sr_ethernet_hdr_t);*/
                 sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (ethhd + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-                struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
+                /*struct sr_if* inter = sr_get_interface(sr, req->packets->iface);*/
                 sr_ip_hdr_t* IPpacket = sr_ICMPtoIP(req->packets->buf, 0x03, 1, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), ICMP_DATA_SIZE);
                 sendIP(sr, IPpacket, sizeof(sr_icmp_hdr_t) + ICMP_DATA_SIZE, req->packets->iface);
                 sr_arpreq_destroy(cache, req);
@@ -38,7 +38,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
                 uint8_t* reqPacket = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
                 struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
               sr_ethernet_hdr_t* req_ether = (sr_ethernet_hdr_t*) reqPacket;
-              memset(req_ether->ether_dhost, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
+              memset(req_ether->ether_dhost, 0xFF, ETHER_ADDR_LEN);
               memcpy(req_ether->ether_shost, inter->addr, ETHER_ADDR_LEN);
               req_ether->ether_type = htons(ethertype_arp);
 
@@ -54,8 +54,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
               req_arp->ar_tip = req->ip;
 
               /*send packet function in sr_vns_comm.c*/
-              printf("are you fucking here do not have sex here please \n");
-              print_hdrs(reqPacket, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
+              /*print_hdrs(reqPacket, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));*/
               sr_send_packet(sr, reqPacket, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), inter->name);
 
 
