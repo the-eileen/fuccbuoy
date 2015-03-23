@@ -131,10 +131,10 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t r
         IPpkt->ip_src = IPpkt->ip_dst;
         IPpkt->ip_dst = temp;
 	if (type == 0)
-        	IPpkt->ip_sum = cksum(IPpkt, sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t));
+        	IPpkt->ip_sum = cksum(IPpkt, IPpkt->ip_hl*4 + sizeof(sr_icmp_hdr_t));
 	else
-		IPpkt->ip_sum = cksum(IPpkt, sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_t3_hdr_t));
-	print_hdr_ip(IPpkt);
+		IPpkt->ip_sum = cksum(IPpkt, IPpkt->ip_hl*4 + sizeof(sr_icmp_t3_hdr_t));
+	print_hdr_ip((uint8_t*)IPpkt);
 	if (type == 0)
         	print_hdr_icmp(icmp);
         else
@@ -151,9 +151,12 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
   sr_ip_hdr_t* ip_pack = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t)); 
   
   /*verify checksum before proceeding further*/
+  printf("length is %d\n", len-sizeof(sr_ethernet_hdr_t));
+  printf("ip_pack->len = %d\n", ntohs(ip_pack->ip_len));
+  uint8_t* buf = (uint8_t*)ip_pack;
   uint16_t original_chksum = ip_pack->ip_sum;
   ip_pack->ip_sum = 0;
-  uint16_t computed_chksum = cksum(ip_pack, ntohs(ip_pack->ip_len));
+  uint16_t computed_chksum = cksum(buf, ip_pack->ip_hl * 4);
   /*computed_chksum = cksum(ip_pack, ip_pack->ip_len);*/
   if (computed_chksum != original_chksum)
   {
@@ -215,7 +218,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
     /* recompute chksum after decrementing ttl */
     ip_pack->ip_sum = 0;
 
-    ip_pack->ip_sum = cksum((const void*)ip_pack, ntohs(ip_pack->ip_len));
+    ip_pack->ip_sum = cksum((const void*)ip_pack, ip_pack->ip_hl*4);
 
     struct sr_rt* entry = sr->routing_table;
     while (entry != NULL)
