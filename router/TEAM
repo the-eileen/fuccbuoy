@@ -10,7 +10,7 @@ Responsible for most of the ARP requests and replies.  Set up the arp cache and 
 Joshua St. Clair
 904187688
 
-Responsible for ICMP packets and most IP packest.  Also computed and created checksums.
+Responsible for ICMP packets and most IP packes.  Also computed and created checksums.
 
 
 While these are the subjects that each student mainly tackled, everyone helped everyone else with their work.  These subjects are to be considered to be broad strokes of what was done, not explicit tasks that each student was responsible for.
