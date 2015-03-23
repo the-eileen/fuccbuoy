@@ -41,7 +41,9 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
               sr_ethernet_hdr_t* req_ether = (sr_ethernet_hdr_t*) req->packets->buf;
               memset(req_ether->ether_dhost, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
               memcpy(req_ether->ether_shost, inter->addr, ETHER_ADDR_LEN);
+
               req_ether->ether_type = ntohs(ethertype_arp);
+
 
               sr_arp_hdr_t* req_arp = (sr_arp_hdr_t*) (req->packets->buf + sizeof(sr_ethernet_hdr_t));
               req_arp->ar_hrd = ntohs(arp_hrd_ethernet);
