@@ -76,6 +76,9 @@ void sendIP(struct sr_instance* sr,
     /*print_hdr_icmp(frame+sizeof(sr_ip_hdr_t) + sizeof(sr_ethernet_hdr_t));*/
     memcpy(iphdr, IPpacket, packet_len);
 
+    /*printf("at this point wanted ip seems to be");
+    print_addr_ip_int(ntohl(iphdr->ip_dst));
+    printf("\n");*/
     /*check whether it's in the cache*/
   
     struct sr_arpentry * result = sr_arpcache_lookup(&sr->cache, iphdr->ip_dst);
@@ -92,8 +95,8 @@ void sendIP(struct sr_instance* sr,
 
     else
     {
-        /*no mapping */
-        sr_arpcache_queuereq(&sr->cache, iphdr->ip_dst, frame, sizeof(sr_ethernet_hdr_t) + packet_len, iface);
+        /*no mapping  */
+        sr_arpcache_queuereq(&sr->cache, iphdr->ip_dst, frame, sizeof(sr_ethernet_hdr_t) + IPpacket->ip_len, iface);
     }
 }
 
