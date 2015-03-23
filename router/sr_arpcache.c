@@ -38,7 +38,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
                 uint8_t* reqPacket = malloc(sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
                 struct sr_if* inter = sr_get_interface(sr, req->packets->iface);
               sr_ethernet_hdr_t* req_ether = (sr_ethernet_hdr_t*) reqPacket;
-              /*memcpy(req_ether->ether_dhost, etherhead->ether_shost, ETHER_ADDR_LEN);*/
+              memset(req_ether->ether_dhost, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
               memcpy(req_ether->ether_shost, inter->addr, ETHER_ADDR_LEN);
               req_ether->ether_type = ethertype_arp;
 
