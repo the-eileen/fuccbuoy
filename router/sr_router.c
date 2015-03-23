@@ -73,6 +73,7 @@ void sendIP(struct sr_instance* sr,
     ether->ether_type = htons(ethertype_ip); /* Josh: changed to htons since we're sending to network right? */
 
     sr_ip_hdr_t *iphdr = (sr_ip_hdr_t*) (frame + sizeof(sr_ethernet_hdr_t));
+    print_hdr_icmp(frame+(iphdr->ip_hl)*4 + sizeof(sr_ethernet_hdr_t));
     memcpy(iphdr, IPpacket, packet_len);
 
     /*check whether it's in the cache*/
@@ -83,7 +84,9 @@ void sendIP(struct sr_instance* sr,
 
         /* there exists a mapping! send that mofo*/
         memcpy(ether->ether_dhost, result->mac, 6);
-        printf("size is %d\n", sizeof(sr_ethernet_hdr_t) + packet_len);
+	printf("packet_len size is %d\n", packet_len);
+	printf("sizeof(sr_ethernet_hdr_t) = %d\n", sizeof(sr_ethernet_hdr_t));
+        printf("together size is %d\n", sizeof(sr_ethernet_hdr_t) + packet_len);
         printf("SENDING THROUGH THIS SENDIP NAO!! \n");
         print_hdrs(frame, sizeof(sr_ethernet_hdr_t) + packet_len);
         sr_send_packet(sr, frame, sizeof(sr_ethernet_hdr_t) + packet_len, iface);
@@ -103,20 +106,20 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t r
     /*  sr_icmp_t11_hdr_t *icmp11Pkt; 
         sr_icmp_t3_hdr_t *icmp3Pkt;
         sr_icmp_hdr_t *icmp0pkt;*/
-	if (type == 0) /* echo reply */
-	  len = 0;
         printf("We malloc %d for icmp len\n", len);
         sr_icmp_hdr_t* icmp = malloc(sizeof(sr_icmp_hdr_t) + len);
-        sr_ip_hdr_t *IPpkt = malloc(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + len);
         sr_ip_hdr_t *orig = (sr_ip_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t));
-	
+        sr_ip_hdr_t *IPpkt = malloc((orig->ip_hl)*4 + sizeof(sr_icmp_hdr_t) + len);
+ 	
 	icmp->icmp_type = type;
 	icmp->icmp_code = code;
 	icmp->icmp_idseq = rest;
-	memcpy(icmp + sizeof(sr_icmp_hdr_t), data, len);
+	if (type != 0)
+		memcpy(icmp + sizeof(sr_icmp_hdr_t), data, len);
 	icmp->icmp_sum = 0;
 	icmp->icmp_sum = cksum(icmp, sizeof(sr_icmp_hdr_t) + len);
         memcpy(IPpkt + sizeof(sr_ip_hdr_t), icmp, sizeof(sr_icmp_hdr_t) + len);
+        
         /*
         if (type == 0x0c){
           icmp11Pkt = malloc(sizeof(sr_icmp_t11_hdr_t));
@@ -161,7 +164,7 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t r
         IPpkt->ip_hl = orig->ip_hl;
         IPpkt->ip_tos = orig->ip_tos;
         IPpkt->ip_id = orig->ip_id;
-        IPpkt->ip_len = htons(sizeof(sr_ip_hdr_t) + sizeof(sr_icmp_hdr_t) + len);
+        IPpkt->ip_len = htons(orig->ip_hl*4 + sizeof(sr_icmp_hdr_t) + len);
         IPpkt->ip_off = orig->ip_off;
         IPpkt->ip_ttl = orig->ip_ttl;
         IPpkt->ip_p = orig->ip_p;
@@ -169,9 +172,10 @@ sr_ip_hdr_t* sr_ICMPtoIP(uint8_t* packet, uint8_t type, uint8_t code, uint32_t r
         IPpkt->ip_src = orig->ip_dst;
         IPpkt->ip_dst = orig->ip_src;
 
-        IPpkt->ip_sum = cksum((const void*)IPpkt, sizeof(sr_ip_hdr_t));
+        IPpkt->ip_sum = cksum((const void*)IPpkt, ntohs(IPpkt->ip_len));
 
-	printf("Size of ICMPtoIP packet is %d\n", ntohs(IPpkt->ip_len));
+	print_hdr_ip(IPpkt);
+        print_hdr_icmp(icmp);
         return IPpkt;
 }
 
@@ -217,7 +221,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
 
         printf("received a ping\n");
 	sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
-        sr_ip_hdr_t* echoReply = sr_ICMPtoIP(packet, 0, 0, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), ICMP_DATA_SIZE);
+        sr_ip_hdr_t* echoReply = sr_ICMPtoIP(packet, 0, 0, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), 0);
         sendIP(sr, echoReply, ntohs(echoReply->ip_len), interface);
         free(echoReply);
     }
@@ -226,7 +230,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
         printf("TCP or UDP protocol\n");
         sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
         sr_ip_hdr_t* portUnreach = sr_ICMPtoIP(packet, 3, 3, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), len-sizeof(sr_ethernet_hdr_t)-sizeof(sr_ip_hdr_t)-sizeof(sr_icmp_hdr_t));
-        sendIP(sr, portUnreach, sizeof(sr_icmp_hdr_t) + ICMP_DATA_SIZE , interface);
+        sendIP(sr, portUnreach, ntohs(portUnreach->ip_len) , interface);
         free(portUnreach);
     }    
   }
@@ -241,7 +245,7 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
       printf("IP packet died... RIP IP\n");
       sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
       sr_ip_hdr_t* timeExceed = sr_ICMPtoIP(packet, 11, 0, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), len-sizeof(sr_ethernet_hdr_t)-sizeof(sr_ip_hdr_t)-sizeof(sr_icmp_hdr_t));
-      sendIP(sr, timeExceed, sizeof(sr_icmp_hdr_t) + ICMP_DATA_SIZE , interface);
+      sendIP(sr, timeExceed, ntohs(timeExceed->ip_len) , interface);
       free(timeExceed);
     }
     /* recompute chksum after decrementing ttl */
@@ -262,14 +266,15 @@ void sr_handleIPPacket(struct sr_instance* sr, uint8_t * packet, unsigned int le
       printf("Routing entry not found\n");
       sr_icmp_hdr_t* icmp = (sr_icmp_hdr_t*) (packet + sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t));
       sr_ip_hdr_t* netUnreach = sr_ICMPtoIP(packet, 3, 0, icmp->icmp_idseq, (uint8_t*)(icmp + sizeof(sr_icmp_hdr_t)), len-sizeof(sr_ethernet_hdr_t)-sizeof(sr_ip_hdr_t)-sizeof(sr_icmp_hdr_t));
-      sendIP(sr, netUnreach, sizeof(sr_icmp_hdr_t) + ICMP_DATA_SIZE, interface);
+      sendIP(sr, netUnreach, ntohs(netUnreach->ip_len), interface);
       free(netUnreach);
     }
     /* else get MAC of next hop and forward*/
     else
     {
-      printf("Fowarding IP packet along\n");
-      sendIP(sr, ip_pack, ip_pack->ip_len, interface);
+      printf("Forwarding IP packet along of length %d\n", len-sizeof(sr_ethernet_hdr_t));
+      printf("ip_pack->ip_len is %d\n", ntohs(ip_pack->ip_len));
+      sendIP(sr, ip_pack, len - sizeof(sr_ethernet_hdr_t), interface);
     }
   }
 }
