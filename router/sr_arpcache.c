@@ -40,7 +40,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
               sr_ethernet_hdr_t* req_ether = (sr_ethernet_hdr_t*) reqPacket;
               memset(req_ether->ether_dhost, 0xFFFFFFFFFFFF, ETHER_ADDR_LEN);
               memcpy(req_ether->ether_shost, inter->addr, ETHER_ADDR_LEN);
-              req_ether->ether_type = ethertype_arp;
+              req_ether->ether_type = htons(ethertype_arp);
 
               sr_arp_hdr_t* req_arp = (sr_arp_hdr_t*) req_ether + sizeof(sr_ethernet_hdr_t);
               req_arp->ar_hrd = arp_hrd_ethernet;
@@ -55,6 +55,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
 
               /*send packet function in sr_vns_comm.c*/
               printf("are you fucking here do not have sex here please \n");
+              print_hdrs(reqPacket, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t));
               sr_send_packet(sr, reqPacket, sizeof(sr_ethernet_hdr_t) + sizeof(sr_arp_hdr_t), inter->name);
 
 
